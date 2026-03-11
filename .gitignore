@@ -1,0 +1,26 @@
+# Build artifacts
+bin/
+obj/
+*.dll
+*.pdb
+proto/**/*.cs
+
+# Binaries
+*/*/agg-*
+*/*/saga-*
+*/*/pmg-*
+*/*/prj-*
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Kubernetes
+*.kubeconfig
