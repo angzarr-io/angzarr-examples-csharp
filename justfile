@@ -9,7 +9,7 @@
 #
 # When running outside a devcontainer:
 #   - Builds/uses local devcontainer image with `just` pre-installed
-#   - Podman mounts justfile.container as /workspace/examples/csharp/justfile
+#   - Podman mounts justfile.container as /workspace/justfile
 #   - `just build` on host → podman runs → `just build` in container → dotnet
 #
 # When running inside a devcontainer (DEVCONTAINER=true):
@@ -18,13 +18,13 @@
 
 set shell := ["bash", "-c"]
 
-TOP := `git rev-parse --show-toplevel`
+ROOT := `git rev-parse --show-toplevel`
 IMAGE := "angzarr-csharp-dev"
 
 # Build the devcontainer image
 [private]
 _build-image:
-    podman build --network=host -t {{IMAGE}} -f "{{TOP}}/examples/csharp/.devcontainer/Containerfile" "{{TOP}}/examples/csharp/.devcontainer"
+    podman build --network=host -t {{IMAGE}} -f "{{ROOT}}/.devcontainer/Containerfile" "{{ROOT}}/.devcontainer"
 
 # Run just target in container (or directly if already in devcontainer)
 [private]
@@ -34,9 +34,9 @@ _container +ARGS: _build-image
         just {{ARGS}}
     else
         podman run --rm --network=host \
-            -v "{{TOP}}:/workspace:Z" \
-            -v "{{TOP}}/examples/csharp/justfile.container:/workspace/examples/csharp/justfile:ro" \
-            -w /workspace/examples/csharp \
+            -v "{{ROOT}}:/workspace:Z" \
+            -v "{{ROOT}}/justfile.container:/workspace/justfile:ro" \
+            -w /workspace \
             {{IMAGE}} just {{ARGS}}
     fi
 
@@ -69,13 +69,13 @@ lint:
 
 # Run poker in standalone mode (host - needs Rust)
 run: build
-    mkdir -p "{{TOP}}/examples/csharp/data"
-    cd "{{TOP}}" && cargo run \
+    mkdir -p "{{ROOT}}/data"
+    cd "{{ROOT}}" && cargo run \
         --bin angzarr-standalone \
         --features standalone,sqlite \
         -- --config examples/csharp/standalone.yaml
 
 clean:
-    just _container "dotnet clean /workspace/examples/csharp/Angzarr.Examples.sln" || true
-    rm -rf "{{TOP}}/examples/csharp/data"
-    find "{{TOP}}/examples/csharp" -type d \( -name 'bin' -o -name 'obj' \) -exec rm -rf {} + 2>/dev/null || true
+    just _container "dotnet clean /workspace/Angzarr.Examples.sln" || true
+    rm -rf "{{ROOT}}/data"
+    find "{{ROOT}}/examples/csharp" -type d \( -name 'bin' -o -name 'obj' \) -exec rm -rf {} + 2>/dev/null || true
