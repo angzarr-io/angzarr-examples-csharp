@@ -29,7 +29,8 @@ jobs:
 
       - name: Export proto sources
         run: |
-          buf export buf.build/angzarr/angzarr -o angzarr-proto
+          mkdir -p angzarr-proto
+          cp -r angzarr-project/proto/angzarr/* angzarr-proto/
           cp -r angzarr-project/proto examples-proto
           rm -f examples-proto/examples/ai_player.proto examples-proto/examples/ai_sidecar.proto
 
@@ -78,7 +79,8 @@ jobs:
 
       - name: Export proto sources
         run: |
-          buf export buf.build/angzarr/angzarr -o angzarr-proto
+          mkdir -p angzarr-proto
+          cp -r angzarr-project/proto/angzarr/* angzarr-proto/
           cp -r angzarr-project/proto examples-proto
           rm -f examples-proto/examples/ai_player.proto examples-proto/examples/ai_sidecar.proto
 
