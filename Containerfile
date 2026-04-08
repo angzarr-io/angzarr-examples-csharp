@@ -32,7 +32,7 @@ WORKDIR /app
 # Copy client library submodule (needed for Angzarr.Client ProjectReference)
 COPY angzarr-client-csharp ./angzarr-client-csharp
 
-# Copy pre-generated proto code (buf generate runs before docker build in CI)
+# Copy pre-generated proto code (buf generate runs before docker build)
 COPY Angzarr.Proto/Generated ./Angzarr.Proto/Generated
 
 # Copy solution and project files for dependency resolution

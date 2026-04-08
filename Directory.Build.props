@@ -1,0 +1,12 @@
+<Project>
+  <!--
+    The client submodule (angzarr-client-csharp) has its own Angzarr.Proto
+    that compiles .proto files via Grpc.Tools. When built as part of this
+    solution, redirect it to the examples' pre-generated Angzarr.Proto to
+    avoid producing two assemblies with the same name.
+  -->
+  <ItemGroup Condition="'$(MSBuildProjectName)' == 'Angzarr.Client'">
+    <ProjectReference Remove="@(ProjectReference)" Condition="'%(Filename)' == 'Angzarr.Proto'" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)Angzarr.Proto/Angzarr.Proto.csproj" />
+  </ItemGroup>
+</Project>
