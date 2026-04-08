@@ -229,7 +229,7 @@ jobs:
           TAG: ${{ needs.compute-tag.outputs.tag }}
         run: |
           helm upgrade --install angzarr-csharp \
-            oci://ghcr.io/angzarr-io/helm/angzarr \
+            oci://ghcr.io/angzarr-io/charts/angzarr \
             -f deploy/k8s/helm/values.yaml \
             -f deploy/k8s/helm/values-ci.yaml \
             --set images.aggregate.tag=${{ env.COORDINATOR_VERSION }} \
