@@ -9,8 +9,7 @@
 # 3. Slim Debian runtime - minimal attack surface
 # 4. Multi-arch support (amd64 + arm64)
 #
-# Note: Using Debian-based images (not Alpine) because Grpc.Tools NuGet package
-# bundles glibc-linked protoc binaries that don't run on musl-based Alpine.
+# Note: Using Debian-based images (not Alpine) for glibc compatibility.
 
 ARG DOTNET_VERSION=8.0
 
@@ -34,9 +33,8 @@ WORKDIR /app
 # Copy client library submodule (needed for Angzarr.Client ProjectReference)
 COPY angzarr-client-csharp ./angzarr-client-csharp
 
-# Copy buf-exported proto sources
-COPY angzarr-proto ./angzarr-proto
-COPY examples-proto ./examples-proto
+# Copy pre-generated proto code (buf generate runs before docker build)
+COPY Angzarr.Proto/Generated ./Angzarr.Proto/Generated
 
 # Copy solution and project files for dependency resolution
 COPY Angzarr.Examples.sln ./

@@ -9,27 +9,5 @@
         <PackageReference Include="Google.Protobuf" Version="3.25.1" />
         <PackageReference Include="Google.Api.CommonProtos" Version="2.15.0" />
         <PackageReference Include="Grpc.Net.Client" Version="2.60.0" />
-        <PackageReference Include="Grpc.Tools" Version="2.60.0" PrivateAssets="All" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <Protobuf
-            Include="../angzarr-proto/angzarr/*.proto"
-            GrpcServices="Both"
-            ProtoRoot="../angzarr-proto"
-        />
-        <Protobuf
-            Include="../examples-proto/examples/poker_types.proto;
-                     ../examples-proto/examples/orchestration.proto;
-                     ../examples-proto/examples/player.proto;
-                     ../examples-proto/examples/table.proto;
-                     ../examples-proto/examples/hand.proto;
-                     ../examples-proto/examples/buy_in.proto;
-                     ../examples-proto/examples/rebuy.proto;
-                     ../examples-proto/examples/registration.proto;
-                     ../examples-proto/examples/tournament.proto"
-            GrpcServices="Both"
-            ProtoRoot="../examples-proto"
-        />
     </ItemGroup>
 </Project>

@@ -5,7 +5,10 @@ obj/
 *.pdb
 proto/**/*.cs
 
-# buf-exported proto sources
+# buf generate output
+Angzarr.Proto/Generated/
+
+# buf-exported proto sources (legacy)
 angzarr-proto/
 examples-proto/
 

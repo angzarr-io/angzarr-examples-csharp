@@ -10,7 +10,11 @@ SLN := "Angzarr.Examples.sln"
 default:
     @just --list
 
-restore:
+# Generate C# proto code from .proto sources via buf
+proto-gen:
+    buf generate
+
+restore: proto-gen
     dotnet restore {{SLN}}
 
 build: restore
