@@ -35,6 +35,9 @@ COPY angzarr-client-csharp ./angzarr-client-csharp
 # Copy pre-generated proto code (buf generate runs before docker build)
 COPY Angzarr.Proto/Generated ./Angzarr.Proto/Generated
 
+# Copy MSBuild customization (redirects client's Angzarr.Proto to main)
+COPY Directory.Build.targets ./
+
 # Copy solution and project files for dependency resolution
 COPY Angzarr.Examples.sln ./
 COPY Angzarr.Proto/Angzarr.Proto.csproj ./Angzarr.Proto/
