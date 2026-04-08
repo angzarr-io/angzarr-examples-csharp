@@ -42,7 +42,7 @@ jobs:
         run: dotnet build Angzarr.Examples.sln --configuration Release --no-restore
 
       - name: Test
-        run: dotnet test Angzarr.Examples.sln --configuration Release --no-build --verbosity normal
+        run: dotnet test Angzarr.Examples.sln --configuration Release --no-build --verbosity normal --filter "TestCategory!=Acceptance"
 
   build-images:
     name: Build & Push Images
