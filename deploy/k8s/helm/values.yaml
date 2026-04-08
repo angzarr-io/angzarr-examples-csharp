@@ -1,0 +1,260 @@
+# C# poker example applications for local development
+# Deploy with: helm upgrade --install angzarr <chart> -f ./deploy/k8s/helm/values.yaml -n angzarr --create-namespace
+#
+# =============================================================================
+# Port Scheme - C# (50500-50599)
+# =============================================================================
+#
+# agg-player:           50501  (gRPC)
+# agg-table:            50502  (gRPC)
+# agg-hand:             50503  (gRPC)
+# saga-table-hand:      50511  (gRPC)
+# saga-table-player:    50512  (gRPC)
+# saga-hand-table:      50513  (gRPC)
+# saga-hand-player:     50514  (gRPC)
+# prj-output:           50590  (gRPC)
+# pmg-hand-flow:        50591  (gRPC)
+# =============================================================================
+
+# Global settings
+global:
+  security:
+    allowInsecureImages: true
+
+replicaCount: 1
+
+# Angzarr sidecar images (using local registry)
+images:
+  aggregate:
+    repository: ghcr.io/angzarr-io/angzarr-aggregate
+    pullPolicy: IfNotPresent
+    tag: "latest"
+  projector:
+    repository: ghcr.io/angzarr-io/angzarr-projector
+    pullPolicy: IfNotPresent
+    tag: "latest"
+  saga:
+    repository: ghcr.io/angzarr-io/angzarr-saga
+    pullPolicy: IfNotPresent
+    tag: "latest"
+  processManager:
+    repository: ghcr.io/angzarr-io/angzarr-process-manager
+    pullPolicy: IfNotPresent
+    tag: "latest"
+  stream:
+    repository: ghcr.io/angzarr-io/angzarr-stream
+    pullPolicy: IfNotPresent
+    tag: "latest"
+  gateway:
+    repository: ghcr.io/angzarr-io/angzarr-gateway
+    pullPolicy: IfNotPresent
+    tag: "latest"
+  log:
+    repository: ghcr.io/angzarr-io/angzarr-log
+    pullPolicy: IfNotPresent
+    tag: "latest"
+
+# Minimal resources for local dev
+resources:
+  requests:
+    memory: "64Mi"
+    cpu: "50m"
+  limits:
+    memory: "256Mi"
+    cpu: "250m"
+
+applicationResources:
+  requests:
+    memory: "32Mi"
+    cpu: "25m"
+  limits:
+    memory: "128Mi"
+    cpu: "100m"
+
+# Storage configuration
+# Requires: helm install angzarr-db ./deploy/k8s/helm/postgres -n angzarr
+storage:
+  type: postgres
+  postgres:
+    uri: "postgres://angzarr:angzarr-dev@angzarr-db-rw:5432/angzarr"
+
+# Messaging configuration
+# Requires: helm install angzarr-mq ./deploy/k8s/helm/rabbitmq -n angzarr
+messaging:
+  type: "amqp"
+  amqp:
+    enabled: true
+    url: "amqp://guest:guest@angzarr-mq:5672/%2F"
+
+# AMQP event bus
+amqp:
+  enabled: true
+  url: "amqp://guest:guest@angzarr-mq:5672/%2F"
+
+# External secrets disabled for local dev
+externalSecrets:
+  enabled: false
+
+# Central infrastructure services
+infrastructure:
+  stream:
+    enabled: true
+    replicas: 1
+    port: 1340
+    projectorPort: 1345
+    serviceType: NodePort
+    nodePort: 31340
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "50m"
+      limits:
+        memory: "256Mi"
+        cpu: "250m"
+
+  gateway:
+    enabled: true
+    replicas: 1
+    port: 9084
+    serviceType: NodePort
+    nodePort: 30084
+    streamService: "angzarr-stream:1340"
+    streamTimeoutSecs: 30
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "50m"
+      limits:
+        memory: "256Mi"
+        cpu: "250m"
+
+  log:
+    enabled: true
+    replicas: 1
+    port: 50051
+    resources:
+      requests:
+        memory: "32Mi"
+        cpu: "25m"
+      limits:
+        memory: "128Mi"
+        cpu: "100m"
+
+# Business applications - each gets angzarr as sidecar
+applications:
+  business:
+    # Poker Domain Aggregates (C#: 50500-50599)
+    - name: agg-player-csharp
+      image:
+        repository: ghcr.io/angzarr-io/examples-csharp-agg-player
+        tag: "latest"
+        pullPolicy: IfNotPresent
+      domain: "player"
+      port: 50501
+
+    - name: agg-table-csharp
+      image:
+        repository: ghcr.io/angzarr-io/examples-csharp-agg-table
+        tag: "latest"
+        pullPolicy: IfNotPresent
+      domain: "table"
+      port: 50502
+
+    - name: agg-hand-csharp
+      image:
+        repository: ghcr.io/angzarr-io/examples-csharp-agg-hand
+        tag: "latest"
+        pullPolicy: IfNotPresent
+      domain: "hand"
+      port: 50503
+
+  sagas:
+    - name: saga-table-hand-csharp
+      image:
+        repository: ghcr.io/angzarr-io/examples-csharp-saga-table-hand
+        tag: "latest"
+        pullPolicy: IfNotPresent
+      domain: "saga-table-hand"
+      port: 50511
+      topics:
+        - "table.*"
+
+    - name: saga-table-player-csharp
+      image:
+        repository: ghcr.io/angzarr-io/examples-csharp-saga-table-player
+        tag: "latest"
+        pullPolicy: IfNotPresent
+      domain: "saga-table-player"
+      port: 50512
+      topics:
+        - "table.*"
+
+    - name: saga-hand-table-csharp
+      image:
+        repository: ghcr.io/angzarr-io/examples-csharp-saga-hand-table
+        tag: "latest"
+        pullPolicy: IfNotPresent
+      domain: "saga-hand-table"
+      port: 50513
+      topics:
+        - "hand.*"
+
+    - name: saga-hand-player-csharp
+      image:
+        repository: ghcr.io/angzarr-io/examples-csharp-saga-hand-player
+        tag: "latest"
+        pullPolicy: IfNotPresent
+      domain: "saga-hand-player"
+      port: 50514
+      topics:
+        - "hand.*"
+
+  projectors:
+    - name: prj-output-csharp
+      image:
+        repository: ghcr.io/angzarr-io/examples-csharp-prj-output
+        tag: "latest"
+        pullPolicy: IfNotPresent
+      domain: "output"
+      port: 50590
+      topics:
+        - "player.*"
+        - "table.*"
+        - "hand.*"
+
+  processManagers:
+    - name: pmg-hand-flow-csharp
+      image:
+        repository: ghcr.io/angzarr-io/examples-csharp-pmg-hand-flow
+        tag: "latest"
+        pullPolicy: IfNotPresent
+      domain: "pmg-hand-flow"
+      port: 50591
+      topics:
+        - "player.*"
+        - "table.*"
+        - "hand.*"
+
+# Service configuration
+service:
+  type: NodePort
+  aggregatePort: 1310
+  queryPort: 1315
+  nodePort:
+    enabled: true
+    aggregate: 31310
+
+debug:
+  enabled: false
+
+logging:
+  level: info
+
+autoscaling:
+  enabled: false
+
+reloader:
+  enabled: false
+
+serviceDiscovery:
+  headless: false

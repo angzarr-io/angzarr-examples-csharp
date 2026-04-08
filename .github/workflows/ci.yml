@@ -5,23 +5,303 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/angzarr-io/examples-csharp
+  COORDINATOR_VERSION: latest
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  build:
+  test:
     name: Build & Test
     runs-on: ubuntu-latest
-    container: ghcr.io/angzarr-io/angzarr-csharp:latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
-      - name: Configure git safe directory
-        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore Angzarr.Examples.sln
 
       - name: Build
-        run: just build
+        run: dotnet build Angzarr.Examples.sln --configuration Release --no-restore
 
-      - name: Test (unit)
-        run: just test-unit
+      - name: Test
+        run: dotnet test Angzarr.Examples.sln --configuration Release --no-build --verbosity normal
 
-      - name: Lint
-        run: just lint
+  build-images:
+    name: Build & Push Images
+    runs-on: ubuntu-latest
+    needs: test
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        target:
+          - agg-player
+          - agg-table
+          - agg-hand
+          - saga-table-hand
+          - saga-table-player
+          - saga-hand-table
+          - saga-hand-player
+          - pmg-hand-flow
+          - prj-output
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate image tags
+        id: tags
+        run: |
+          SHA="${{ github.sha }}"
+          SHORT_SHA="${SHA:0:7}"
+
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            PR_NUM="${{ github.event.pull_request.number }}"
+            echo "tags=${{ env.IMAGE_PREFIX }}-${{ matrix.target }}:pr-${PR_NUM}-${SHORT_SHA}" >> $GITHUB_OUTPUT
+          else
+            echo "tags=${{ env.IMAGE_PREFIX }}-${{ matrix.target }}:${SHORT_SHA},${{ env.IMAGE_PREFIX }}-${{ matrix.target }}:latest" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Containerfile
+          target: ${{ matrix.target }}
+          push: true
+          tags: ${{ steps.tags.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Compute image tag for acceptance tests
+  compute-tag:
+    name: Compute Image Tag
+    runs-on: ubuntu-latest
+    needs: build-images
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+      images-json: ${{ steps.images.outputs.json }}
+    steps:
+      - name: Generate image tag
+        id: tag
+        run: |
+          SHA="${{ github.sha }}"
+          SHORT_SHA="${SHA:0:7}"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            PR_NUM="${{ github.event.pull_request.number }}"
+            echo "tag=pr-${PR_NUM}-${SHORT_SHA}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${SHORT_SHA}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build images JSON
+        id: images
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+          PREFIX: ${{ env.IMAGE_PREFIX }}
+        run: |
+          JSON=$(cat <<EOF
+          {
+            "agg-player": "${PREFIX}-agg-player:${TAG}",
+            "agg-table": "${PREFIX}-agg-table:${TAG}",
+            "agg-hand": "${PREFIX}-agg-hand:${TAG}",
+            "saga-table-hand": "${PREFIX}-saga-table-hand:${TAG}",
+            "saga-table-player": "${PREFIX}-saga-table-player:${TAG}",
+            "saga-hand-table": "${PREFIX}-saga-hand-table:${TAG}",
+            "saga-hand-player": "${PREFIX}-saga-hand-player:${TAG}",
+            "pmg-hand-flow": "${PREFIX}-pmg-hand-flow:${TAG}",
+            "prj-output": "${PREFIX}-prj-output:${TAG}"
+          }
+          EOF
+          )
+          echo "json=$(echo "$JSON" | jq -c '.')" >> $GITHUB_OUTPUT
+
+  acceptance-test:
+    name: Acceptance Tests
+    runs-on: ubuntu-latest
+    needs: [build-images, compute-tag]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+
+      - name: Parse image inputs
+        id: images
+        env:
+          VERSION: ${{ env.COORDINATOR_VERSION }}
+        run: |
+          COORD=$(cat <<EOF
+          {
+            "aggregate": "ghcr.io/angzarr-io/angzarr-aggregate:${VERSION}",
+            "saga": "ghcr.io/angzarr-io/angzarr-saga:${VERSION}",
+            "projector": "ghcr.io/angzarr-io/angzarr-projector:${VERSION}",
+            "process-manager": "ghcr.io/angzarr-io/angzarr-process-manager:${VERSION}",
+            "stream": "ghcr.io/angzarr-io/angzarr-stream:${VERSION}",
+            "gateway": "ghcr.io/angzarr-io/angzarr-grpc-gateway:${VERSION}",
+            "log": "ghcr.io/angzarr-io/angzarr-log:${VERSION}"
+          }
+          EOF
+          )
+          echo "coordinators=$(echo "$COORD" | jq -c '.')" >> $GITHUB_OUTPUT
+
+      - name: Create Kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: angzarr-test
+          config: deploy/kind/cluster.yaml
+          node_image: kindest/node:v1.31.0
+          wait: 120s
+
+      - name: Create namespace
+        run: kubectl create namespace angzarr-test --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Create image pull secret
+        env:
+          REGISTRY_TOKEN: ${{ secrets.GHCR_TOKEN || github.token }}
+        run: |
+          kubectl create secret docker-registry ghcr-pull-secret \
+            --docker-server=ghcr.io \
+            --docker-username=${{ github.actor }} \
+            --docker-password="${REGISTRY_TOKEN}" \
+            --namespace=angzarr-test \
+            --dry-run=client -o yaml | kubectl apply -f -
+          kubectl patch serviceaccount default -n angzarr-test \
+            -p '{"imagePullSecrets": [{"name": "ghcr-pull-secret"}]}' || true
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_TOKEN || github.token }}
+
+      - name: Log in to Helm registry
+        run: echo "${{ secrets.GHCR_TOKEN || github.token }}" | helm registry login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Pull and load coordinator images
+        run: |
+          IMAGES='${{ steps.images.outputs.coordinators }}'
+          echo "Pulling coordinator images..."
+          echo "$IMAGES" | jq -r 'to_entries[] | "\(.key): \(.value)"'
+          echo "$IMAGES" | jq -r 'to_entries[] | .value' | while read img; do
+            echo "Pulling $img..."
+            docker pull "$img"
+            kind load docker-image "$img" --name angzarr-test
+          done
+
+      - name: Pull and load example images
+        run: |
+          IMAGES='${{ needs.compute-tag.outputs.images-json }}'
+          echo "Pulling example images..."
+          echo "$IMAGES" | jq -r 'to_entries[] | "\(.key): \(.value)"'
+          echo "$IMAGES" | jq -r 'to_entries[] | .value' | while read img; do
+            echo "Pulling $img..."
+            docker pull "$img"
+            kind load docker-image "$img" --name angzarr-test
+          done
+
+      - name: Deploy with Helm
+        env:
+          TAG: ${{ needs.compute-tag.outputs.tag }}
+        run: |
+          helm upgrade --install angzarr-csharp \
+            oci://ghcr.io/angzarr-io/helm/angzarr \
+            -f deploy/k8s/helm/values.yaml \
+            -f deploy/k8s/helm/values-ci.yaml \
+            --set images.aggregate.tag=${{ env.COORDINATOR_VERSION }} \
+            --set images.saga.tag=${{ env.COORDINATOR_VERSION }} \
+            --set images.projector.tag=${{ env.COORDINATOR_VERSION }} \
+            --set images.processManager.tag=${{ env.COORDINATOR_VERSION }} \
+            --set images.stream.tag=${{ env.COORDINATOR_VERSION }} \
+            --set images.gateway.tag=${{ env.COORDINATOR_VERSION }} \
+            --set images.log.tag=${{ env.COORDINATOR_VERSION }} \
+            -n angzarr-test \
+            --wait --timeout 5m
+
+      - name: Smoke test - verify pods are running
+        run: |
+          echo "=== Waiting for pods to be ready ==="
+          kubectl wait --for=condition=ready pod --all -n angzarr-test --timeout=300s || true
+
+          echo ""
+          echo "=== Pod Status ==="
+          kubectl get pods -n angzarr-test -o wide
+
+          echo ""
+          echo "=== Services ==="
+          kubectl get svc -n angzarr-test
+
+          # Verify at least the aggregate pods are running
+          RUNNING=$(kubectl get pods -n angzarr-test --field-selector=status.phase=Running -o name | wc -l)
+          echo ""
+          echo "Running pods: $RUNNING"
+
+          if [ "$RUNNING" -lt 3 ]; then
+            echo "ERROR: Expected at least 3 running pods (aggregates), got $RUNNING"
+            exit 1
+          fi
+
+          echo ""
+          echo "Smoke test passed: $RUNNING pods running"
+
+      - name: Show logs on failure
+        if: failure()
+        run: |
+          echo "=== Pod Status ==="
+          kubectl get pods -n angzarr-test -o wide
+          echo ""
+          echo "=== Recent Events ==="
+          kubectl get events -n angzarr-test --sort-by='.lastTimestamp' | tail -30
+          echo ""
+          echo "=== Pod Logs ==="
+          for pod in $(kubectl get pods -n angzarr-test -o name 2>/dev/null); do
+            echo "--- $pod ---"
+            kubectl logs $pod -n angzarr-test --all-containers --tail=50 || true
+          done
+
+  summary:
+    name: Summary
+    runs-on: ubuntu-latest
+    needs: [test, build-images, acceptance-test]
+    if: always()
+    steps:
+      - name: Check results
+        run: |
+          echo "## CI Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Test | ${{ needs.test.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build Images | ${{ needs.build-images.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Acceptance Tests | ${{ needs.acceptance-test.result }} |" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ needs.test.result }}" != "success" ] || \
+             [ "${{ needs.build-images.result }}" != "success" ] || \
+             [ "${{ needs.acceptance-test.result }}" != "success" ]; then
+            echo "One or more required jobs failed"
+            exit 1
+          fi
