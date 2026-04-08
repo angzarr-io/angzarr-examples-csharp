@@ -27,13 +27,18 @@ WORKDIR /app
 # ============================================================================
 FROM base AS restore
 
+RUN curl -sSL "https://github.com/bufbuild/buf/releases/latest/download/buf-$(uname -s)-$(uname -m)" -o /usr/local/bin/buf \
+    && chmod +x /usr/local/bin/buf
+
 WORKDIR /app
+
+# Copy proto sources and generate C# code inside the container
+COPY angzarr-project ./angzarr-project
+COPY buf.gen.yaml buf.yaml ./
+RUN buf generate
 
 # Copy client library submodule (needed for Angzarr.Client ProjectReference)
 COPY angzarr-client-csharp ./angzarr-client-csharp
-
-# Copy pre-generated proto code (buf generate runs before docker build)
-COPY Angzarr.Proto/Generated ./Angzarr.Proto/Generated
 
 # Copy solution and project files for dependency resolution
 COPY Angzarr.Examples.sln ./
