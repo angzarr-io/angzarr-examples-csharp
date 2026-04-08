@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.4
 # C# poker examples - optimized multi-stage build
-# Build: podman build -t poker-csharp-player --target agg-player -f examples/csharp/Containerfile .
-# Context must be repo root for client library access
+# Build: podman build -t poker-csharp-player --target agg-player -f Containerfile .
+# Context is the examples-csharp repo root (with angzarr-client-csharp submodule)
 #
 # Optimizations:
 # 1. Shared restore stage - NuGet restore runs once
@@ -31,33 +31,28 @@ FROM base AS restore
 
 WORKDIR /app
 
-# Copy proto files (required by Angzarr.Proto for proto compilation)
-COPY proto ./proto
-
-# Copy client library (local dependency)
-COPY client/csharp ./client/csharp
+# Copy client library submodule (including nested angzarr proto submodule)
+COPY angzarr-client-csharp ./angzarr-client-csharp
 
 # Copy solution and project files for dependency resolution
-COPY examples/csharp/Angzarr.Examples.sln ./examples/csharp/
-COPY examples/csharp/Angzarr.Proto/Angzarr.Proto.csproj ./examples/csharp/Angzarr.Proto/
-COPY examples/csharp/Player/Agg/Player.Agg.csproj ./examples/csharp/Player/Agg/
-COPY examples/csharp/Table/Agg/Table.Agg.csproj ./examples/csharp/Table/Agg/
-COPY examples/csharp/Hand/Agg/Hand.Agg.csproj ./examples/csharp/Hand/Agg/
-COPY examples/csharp/Table/SagaHand/Table.SagaHand.csproj ./examples/csharp/Table/SagaHand/
-COPY examples/csharp/Table/SagaPlayer/Table.SagaPlayer.csproj ./examples/csharp/Table/SagaPlayer/
-COPY examples/csharp/Hand/SagaTable/Hand.SagaTable.csproj ./examples/csharp/Hand/SagaTable/
-COPY examples/csharp/Hand/SagaPlayer/Hand.SagaPlayer.csproj ./examples/csharp/Hand/SagaPlayer/
-COPY examples/csharp/HandFlow/HandFlow.csproj ./examples/csharp/HandFlow/
-COPY examples/csharp/PrjOutput/PrjOutput.csproj ./examples/csharp/PrjOutput/
-COPY examples/csharp/Tests/Tests.csproj ./examples/csharp/Tests/
-COPY examples/csharp/HandFlowOO/HandFlowOO.csproj ./examples/csharp/HandFlowOO/
-COPY examples/csharp/Player/Upc/Player.Upc.csproj ./examples/csharp/Player/Upc/
-COPY examples/csharp/PrjCloudEvents/PrjCloudEvents.csproj ./examples/csharp/PrjCloudEvents/
-COPY examples/csharp/Table/SagaHandOO/Table.SagaHandOO.csproj ./examples/csharp/Table/SagaHandOO/
-COPY examples/csharp/PrjOutputOO/PrjOutputOO.csproj ./examples/csharp/PrjOutputOO/
-COPY examples/csharp/Player/SagaTable/Player.SagaTable.csproj ./examples/csharp/Player/SagaTable/
-
-WORKDIR /app/examples/csharp
+COPY Angzarr.Examples.sln ./
+COPY Angzarr.Proto/Angzarr.Proto.csproj ./Angzarr.Proto/
+COPY Player/Agg/Player.Agg.csproj ./Player/Agg/
+COPY Table/Agg/Table.Agg.csproj ./Table/Agg/
+COPY Hand/Agg/Hand.Agg.csproj ./Hand/Agg/
+COPY Table/SagaHand/Table.SagaHand.csproj ./Table/SagaHand/
+COPY Table/SagaPlayer/Table.SagaPlayer.csproj ./Table/SagaPlayer/
+COPY Hand/SagaTable/Hand.SagaTable.csproj ./Hand/SagaTable/
+COPY Hand/SagaPlayer/Hand.SagaPlayer.csproj ./Hand/SagaPlayer/
+COPY HandFlow/HandFlow.csproj ./HandFlow/
+COPY PrjOutput/PrjOutput.csproj ./PrjOutput/
+COPY Tests/Tests.csproj ./Tests/
+COPY HandFlowOO/HandFlowOO.csproj ./HandFlowOO/
+COPY Player/Upc/Player.Upc.csproj ./Player/Upc/
+COPY PrjCloudEvents/PrjCloudEvents.csproj ./PrjCloudEvents/
+COPY Table/SagaHandOO/Table.SagaHandOO.csproj ./Table/SagaHandOO/
+COPY PrjOutputOO/PrjOutputOO.csproj ./PrjOutputOO/
+COPY Player/SagaTable/Player.SagaTable.csproj ./Player/SagaTable/
 
 # Restore with persistent cache
 RUN --mount=type=cache,id=nuget-cache,target=/root/.nuget/packages,sharing=locked \
@@ -69,23 +64,23 @@ RUN --mount=type=cache,id=nuget-cache,target=/root/.nuget/packages,sharing=locke
 FROM restore AS source
 
 # Copy all source files
-COPY examples/csharp/ ./
+COPY . ./
 
 # ============================================================================
 # Aggregate builds
 # ============================================================================
 FROM source AS build-player
-WORKDIR /app/examples/csharp
+WORKDIR /app
 RUN --mount=type=cache,id=nuget-cache,target=/root/.nuget/packages,sharing=locked \
     dotnet publish Player/Agg/Player.Agg.csproj -c Release -o /out --no-restore
 
 FROM source AS build-table
-WORKDIR /app/examples/csharp
+WORKDIR /app
 RUN --mount=type=cache,id=nuget-cache,target=/root/.nuget/packages,sharing=locked \
     dotnet publish Table/Agg/Table.Agg.csproj -c Release -o /out --no-restore
 
 FROM source AS build-hand
-WORKDIR /app/examples/csharp
+WORKDIR /app
 RUN --mount=type=cache,id=nuget-cache,target=/root/.nuget/packages,sharing=locked \
     dotnet publish Hand/Agg/Hand.Agg.csproj -c Release -o /out --no-restore
 
@@ -93,22 +88,22 @@ RUN --mount=type=cache,id=nuget-cache,target=/root/.nuget/packages,sharing=locke
 # Saga builds
 # ============================================================================
 FROM source AS build-saga-table-hand
-WORKDIR /app/examples/csharp
+WORKDIR /app
 RUN --mount=type=cache,id=nuget-cache,target=/root/.nuget/packages,sharing=locked \
     dotnet publish Table/SagaHand/Table.SagaHand.csproj -c Release -o /out --no-restore
 
 FROM source AS build-saga-table-player
-WORKDIR /app/examples/csharp
+WORKDIR /app
 RUN --mount=type=cache,id=nuget-cache,target=/root/.nuget/packages,sharing=locked \
     dotnet publish Table/SagaPlayer/Table.SagaPlayer.csproj -c Release -o /out --no-restore
 
 FROM source AS build-saga-hand-table
-WORKDIR /app/examples/csharp
+WORKDIR /app
 RUN --mount=type=cache,id=nuget-cache,target=/root/.nuget/packages,sharing=locked \
     dotnet publish Hand/SagaTable/Hand.SagaTable.csproj -c Release -o /out --no-restore
 
 FROM source AS build-saga-hand-player
-WORKDIR /app/examples/csharp
+WORKDIR /app
 RUN --mount=type=cache,id=nuget-cache,target=/root/.nuget/packages,sharing=locked \
     dotnet publish Hand/SagaPlayer/Hand.SagaPlayer.csproj -c Release -o /out --no-restore
 
@@ -116,7 +111,7 @@ RUN --mount=type=cache,id=nuget-cache,target=/root/.nuget/packages,sharing=locke
 # Process Manager build
 # ============================================================================
 FROM source AS build-pmg-hand-flow
-WORKDIR /app/examples/csharp
+WORKDIR /app
 RUN --mount=type=cache,id=nuget-cache,target=/root/.nuget/packages,sharing=locked \
     dotnet publish HandFlow/HandFlow.csproj -c Release -o /out --no-restore
 
@@ -124,7 +119,7 @@ RUN --mount=type=cache,id=nuget-cache,target=/root/.nuget/packages,sharing=locke
 # Projector build
 # ============================================================================
 FROM source AS build-prj-output
-WORKDIR /app/examples/csharp
+WORKDIR /app
 RUN --mount=type=cache,id=nuget-cache,target=/root/.nuget/packages,sharing=locked \
     dotnet publish PrjOutput/PrjOutput.csproj -c Release -o /out --no-restore
 

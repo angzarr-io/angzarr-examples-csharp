@@ -24,6 +24,7 @@ IMAGE := "angzarr-csharp-dev"
 # Build the devcontainer image
 [private]
 _build-image:
+    # TODO: add local .devcontainer or update path
     podman build --network=host -t {{IMAGE}} -f "{{ROOT}}/.devcontainer/Containerfile" "{{ROOT}}/.devcontainer"
 
 # Run just target in container (or directly if already in devcontainer)
@@ -73,9 +74,9 @@ run: build
     cd "{{ROOT}}" && cargo run \
         --bin angzarr-standalone \
         --features standalone,sqlite \
-        -- --config examples/csharp/standalone.yaml
+        -- --config standalone.yaml
 
 clean:
     just _container "dotnet clean /workspace/Angzarr.Examples.sln" || true
     rm -rf "{{ROOT}}/data"
-    find "{{ROOT}}/examples/csharp" -type d \( -name 'bin' -o -name 'obj' \) -exec rm -rf {} + 2>/dev/null || true
+    find "{{ROOT}}" -type d \( -name 'bin' -o -name 'obj' \) -not -path "*/angzarr-client-csharp/*" -exec rm -rf {} + 2>/dev/null || true

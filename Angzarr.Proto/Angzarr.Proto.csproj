@@ -14,14 +14,14 @@
 
     <ItemGroup>
         <Protobuf
-            Include="../../../proto/angzarr/*.proto"
+            Include="../angzarr-client-csharp/angzarr/proto/angzarr/*.proto"
             GrpcServices="Both"
-            ProtoRoot="../../../proto"
+            ProtoRoot="../angzarr-client-csharp/angzarr/proto"
         />
         <Protobuf
-            Include="../../../proto/examples/*.proto"
+            Include="../proto/examples/*.proto"
             GrpcServices="Both"
-            ProtoRoot="../../../proto"
+            ProtoRoot="../proto"
         />
     </ItemGroup>
 </Project>

@@ -4,8 +4,9 @@ metadata:
   name: poker-csharp
 
 # Requires base angzarr infrastructure
-requires:
-  - path: ../../skaffold.yaml
+# TODO: update requires path once angzarr infra skaffold is available locally
+# requires:
+#   - path: ../../skaffold.yaml
 
 build:
   tagPolicy:
@@ -18,28 +19,29 @@ build:
     concurrency: 1
   artifacts:
     - image: ghcr.io/angzarr-io/poker-csharp-player
-      context: ../..
+      context: .
       docker:
-        dockerfile: examples/csharp/Containerfile
+        dockerfile: Containerfile
         target: agg-player
 
     - image: ghcr.io/angzarr-io/poker-csharp-table
-      context: ../..
+      context: .
       docker:
-        dockerfile: examples/csharp/Containerfile
+        dockerfile: Containerfile
         target: agg-table
 
     - image: ghcr.io/angzarr-io/poker-csharp-hand
-      context: ../..
+      context: .
       docker:
-        dockerfile: examples/csharp/Containerfile
+        dockerfile: Containerfile
         target: agg-hand
 
 deploy:
   helm:
     releases:
       - name: poker-csharp
-        chartPath: ../../deploy/k8s/helm/angzarr
+        # TODO: update chartPath once helm chart is available locally or via submodule
+        chartPath: angzarr-client-csharp/angzarr/deploy/k8s/helm/angzarr
         namespace: angzarr
         createNamespace: true
         valuesFiles:

@@ -14,7 +14,7 @@
 
     <ItemGroup>
         <ProjectReference Include="../../Angzarr.Proto/Angzarr.Proto.csproj" />
-        <ProjectReference Include="../../../../client/csharp/Angzarr.Client/Angzarr.Client.csproj" />
+        <ProjectReference Include="../../angzarr-client-csharp/Angzarr.Client/Angzarr.Client.csproj" />
     </ItemGroup>
 
     <ItemGroup>

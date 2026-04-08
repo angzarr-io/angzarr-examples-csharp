@@ -9,7 +9,7 @@
 
     <ItemGroup>
         <ProjectReference Include="../Angzarr.Proto/Angzarr.Proto.csproj" />
-        <ProjectReference Include="../../../client/csharp/Angzarr.Client/Angzarr.Client.csproj" />
+        <ProjectReference Include="../angzarr-client-csharp/Angzarr.Client/Angzarr.Client.csproj" />
         <ProjectReference Include="../Player/Agg/Player.Agg.csproj" />
         <ProjectReference Include="../Table/Agg/Table.Agg.csproj" />
         <ProjectReference Include="../Hand/Agg/Hand.Agg.csproj" />
@@ -26,9 +26,9 @@
     </ItemGroup>
 
     <ItemGroup>
-        <SpecFlowFeatureFiles Include="../../../features/unit/**/*.feature" />
+        <SpecFlowFeatureFiles Include="../features/**/*.feature" />
         <None
-            Include="../../../features/unit/**/*.feature"
+            Include="../features/**/*.feature"
             Link="Features/%(RecursiveDir)%(FileName)%(Extension)"
         />
     </ItemGroup>
