@@ -19,7 +19,15 @@
             ProtoRoot="../angzarr-client-csharp/angzarr/proto"
         />
         <Protobuf
-            Include="../angzarr-project/proto/examples/*.proto"
+            Include="../angzarr-project/proto/examples/poker_types.proto;
+                     ../angzarr-project/proto/examples/orchestration.proto;
+                     ../angzarr-project/proto/examples/player.proto;
+                     ../angzarr-project/proto/examples/table.proto;
+                     ../angzarr-project/proto/examples/hand.proto;
+                     ../angzarr-project/proto/examples/buy_in.proto;
+                     ../angzarr-project/proto/examples/rebuy.proto;
+                     ../angzarr-project/proto/examples/registration.proto;
+                     ../angzarr-project/proto/examples/tournament.proto"
             GrpcServices="Both"
             ProtoRoot="../angzarr-project/proto"
         />
