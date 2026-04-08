@@ -46,7 +46,7 @@ images:
     pullPolicy: IfNotPresent
     tag: "latest"
   gateway:
-    repository: ghcr.io/angzarr-io/angzarr-gateway
+    repository: ghcr.io/angzarr-io/angzarr-grpc-gateway
     pullPolicy: IfNotPresent
     tag: "latest"
   log:
