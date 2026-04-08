@@ -29,13 +29,8 @@ jobs:
 
       - name: Export proto sources
         run: |
-          buf export angzarr-project/proto -o _proto_export
-          mkdir -p angzarr-proto/angzarr
-          cp _proto_export/angzarr/*.proto angzarr-proto/angzarr/
-          mkdir -p examples-proto/examples
-          cp _proto_export/examples/*.proto examples-proto/examples/
-          rm -f examples-proto/examples/ai_sidecar.proto
-          rm -rf _proto_export
+          buf export angzarr-project/proto -o angzarr-proto --exclude-path examples
+          buf export angzarr-project/proto -o examples-proto --exclude-path angzarr --exclude-path examples/ai_sidecar.proto
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -82,13 +77,8 @@ jobs:
 
       - name: Export proto sources
         run: |
-          buf export angzarr-project/proto -o _proto_export
-          mkdir -p angzarr-proto/angzarr
-          cp _proto_export/angzarr/*.proto angzarr-proto/angzarr/
-          mkdir -p examples-proto/examples
-          cp _proto_export/examples/*.proto examples-proto/examples/
-          rm -f examples-proto/examples/ai_sidecar.proto
-          rm -rf _proto_export
+          buf export angzarr-project/proto -o angzarr-proto --exclude-path examples
+          buf export angzarr-project/proto -o examples-proto --exclude-path angzarr --exclude-path examples/ai_sidecar.proto
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
