@@ -354,6 +354,57 @@ jobs:
           echo ""
           echo "Smoke test passed: $RUNNING pods running"
 
+      - name: Setup .NET for acceptance tests
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Generate proto code for tests
+        run: buf generate
+
+      - name: Build test project
+        run: |
+          dotnet restore Tests/Tests.csproj
+          dotnet build Tests/Tests.csproj --configuration Release --no-restore
+
+      - name: Port-forward player aggregate
+        run: |
+          echo "Waiting for player aggregate pod..."
+          kubectl wait --for=condition=ready pod -l angzarr.io/domain=player -n angzarr-test --timeout=180s || {
+            echo "Player aggregate pod not ready"
+            kubectl get pods -n angzarr-test
+            exit 1
+          }
+          kubectl port-forward -n angzarr-test svc/player-aggregate 1310:1310 &
+          PF_PID=$!
+          echo "PF_PID=$PF_PID" >> $GITHUB_ENV
+          # Wait for port-forward to establish
+          for i in $(seq 1 10); do
+            if nc -z localhost 1310 2>/dev/null; then
+              echo "Port-forward to player-aggregate:1310 established"
+              break
+            fi
+            if [ "$i" = "10" ]; then
+              echo "WARNING: Port-forward may not be ready yet"
+            fi
+            sleep 1
+          done
+
+      - name: Run acceptance tests
+        env:
+          PLAYER_URL: "http://localhost:1310"
+        run: |
+          dotnet test Tests/Tests.csproj \
+            --configuration Release \
+            --no-build \
+            --filter "TestCategory=Acceptance" \
+            --verbosity normal \
+            --logger "console;verbosity=detailed"
+
+      - name: Stop port-forward
+        if: always()
+        run: kill $PF_PID 2>/dev/null || true
+
       - name: Show logs on failure
         if: failure()
         run: |
