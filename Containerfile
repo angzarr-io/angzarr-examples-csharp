@@ -34,7 +34,7 @@ WORKDIR /app
 
 # Copy proto sources and generate C# code inside the container
 COPY angzarr-project ./angzarr-project
-COPY buf.gen.yaml buf.yaml ./
+COPY buf.gen.yaml ./
 RUN buf generate
 
 # Copy client library submodule (needed for Angzarr.Client ProjectReference)
