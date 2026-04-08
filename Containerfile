@@ -67,6 +67,11 @@ FROM restore AS source
 # Copy all source files
 COPY . ./
 
+# Unify Angzarr.Proto: replace client submodule's Grpc.Tools-based proto project
+# with the main pre-generated one to avoid duplicate assembly conflicts
+RUN cp Angzarr.Proto/Angzarr.Proto.csproj angzarr-client-csharp/Angzarr.Proto/Angzarr.Proto.csproj && \
+    cp -r Angzarr.Proto/Generated angzarr-client-csharp/Angzarr.Proto/
+
 # ============================================================================
 # Aggregate builds
 # ============================================================================
