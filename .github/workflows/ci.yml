@@ -238,6 +238,20 @@ jobs:
             kind load docker-image "$img" --name angzarr-test
           done
 
+      - name: Deploy infrastructure
+        run: |
+          echo "Deploying PostgreSQL..."
+          helm upgrade --install angzarr-db \
+            oci://ghcr.io/angzarr-io/charts/angzarr-db-postgres-simple \
+            --namespace angzarr-test \
+            --wait --timeout 2m
+          echo "Deploying RabbitMQ..."
+          helm upgrade --install angzarr-mq \
+            oci://ghcr.io/angzarr-io/charts/angzarr-mq-rabbitmq-simple \
+            --namespace angzarr-test \
+            --wait --timeout 3m
+          echo "Infrastructure deployed"
+
       - name: Deploy with Helm
         env:
           TAG: ${{ needs.compute-tag.outputs.tag }}
