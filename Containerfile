@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.4
 # C# poker examples - optimized multi-stage build
 # Build: podman build -t poker-csharp-player --target agg-player -f Containerfile .
-# Context is the examples-csharp repo root (with angzarr-client-csharp submodule)
+# Context is the examples-csharp repo root (with buf-exported proto sources)
 #
 # Optimizations:
 # 1. Shared restore stage - NuGet restore runs once
@@ -31,8 +31,12 @@ FROM base AS restore
 
 WORKDIR /app
 
-# Copy client library submodule (including nested angzarr proto submodule)
+# Copy client library submodule (needed for Angzarr.Client ProjectReference)
 COPY angzarr-client-csharp ./angzarr-client-csharp
+
+# Copy buf-exported proto sources
+COPY angzarr-proto ./angzarr-proto
+COPY examples-proto ./examples-proto
 
 # Copy solution and project files for dependency resolution
 COPY Angzarr.Examples.sln ./

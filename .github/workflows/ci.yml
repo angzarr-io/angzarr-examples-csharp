@@ -22,6 +22,16 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Setup buf
+        uses: bufbuild/buf-action@v1
+        with:
+          setup_only: true
+
+      - name: Export proto sources
+        run: |
+          buf export buf.build/angzarr/angzarr -o angzarr-proto
+          buf export buf.build/angzarr/examples -o examples-proto --exclude-path examples/ai_player.proto --exclude-path examples/ai_sidecar.proto
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
@@ -59,6 +69,16 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+
+      - name: Setup buf
+        uses: bufbuild/buf-action@v1
+        with:
+          setup_only: true
+
+      - name: Export proto sources
+        run: |
+          buf export buf.build/angzarr/angzarr -o angzarr-proto
+          buf export buf.build/angzarr/examples -o examples-proto --exclude-path examples/ai_player.proto --exclude-path examples/ai_sidecar.proto
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -143,8 +163,6 @@ jobs:
     needs: [build-images, compute-tag]
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       - name: Install Helm
         uses: azure/setup-helm@v4

@@ -5,6 +5,10 @@ obj/
 *.pdb
 proto/**/*.cs
 
+# buf-exported proto sources
+angzarr-proto/
+examples-proto/
+
 # Binaries
 */*/agg-*
 */*/saga-*
