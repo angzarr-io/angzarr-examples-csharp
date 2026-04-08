@@ -35,10 +35,12 @@ public class HandFlowService : ProcessManagerService.ProcessManagerServiceBase
         ServerCallContext context
     )
     {
+        // destination_sequences replaced repeated EventBook destinations in the proto.
+        // This PM doesn't use destination state, so pass an empty list.
         var (commands, events) = _pm.Handle(
             request.Trigger,
             request.ProcessState,
-            request.Destinations.ToList()
+            new List<EventBook>()
         );
 
         var response = new ProcessManagerHandleResponse();
