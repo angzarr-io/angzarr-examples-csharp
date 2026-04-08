@@ -19,9 +19,9 @@
             ProtoRoot="../angzarr-client-csharp/angzarr/proto"
         />
         <Protobuf
-            Include="../proto/examples/*.proto"
+            Include="../angzarr-project/proto/examples/*.proto"
             GrpcServices="Both"
-            ProtoRoot="../proto"
+            ProtoRoot="../angzarr-project/proto"
         />
     </ItemGroup>
 </Project>
