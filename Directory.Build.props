@@ -6,7 +6,7 @@
     avoid producing two assemblies with the same name.
   -->
   <ItemGroup Condition="'$(MSBuildProjectName)' == 'Angzarr.Client'">
-    <ProjectReference Remove="@(ProjectReference)" Condition="'%(Filename)' == 'Angzarr.Proto'" />
+    <ProjectReference Remove="../Angzarr.Proto/Angzarr.Proto.csproj" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)Angzarr.Proto/Angzarr.Proto.csproj" />
   </ItemGroup>
 </Project>
