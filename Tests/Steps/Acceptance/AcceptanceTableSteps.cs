@@ -182,8 +182,8 @@ public class AcceptanceTableSteps
             GameVariant = GameVariant.TexasHoldem,
             SmallBlind = 5,
             BigBlind = 10,
-            MinBuyIn = 100,
-            MaxBuyIn = 1000,
+            MinBuyIn = 10,
+            MaxBuyIn = 10000,
             MaxPlayers = 9,
         };
         var createResponse = await Client.SendCommandAsync(
@@ -254,5 +254,216 @@ public class AcceptanceTableSteps
         }
 
         _context[$"lastTableResponse:{tableName}"] = new CommandResponse();
+    }
+
+    [Given(@"a table ""(.*)"" with (\d+) seated players")]
+    public async Task GivenTableWithNSeatedPlayers(string tableName, int count)
+    {
+        var tableId = GetOrCreateTableId(tableName);
+        var createCmd = new CreateTable
+        {
+            TableName = tableName,
+            GameVariant = GameVariant.TexasHoldem,
+            SmallBlind = 5,
+            BigBlind = 10,
+            MinBuyIn = 200,
+            MaxBuyIn = 1000,
+            MaxPlayers = 9,
+        };
+        await Client.SendCommandAsync("table", tableId, createCmd, NextTableSequence(tableName));
+
+        if (!_context.TryGetValue("playerSequences", out Dictionary<string, uint>? seqs))
+        {
+            seqs = new Dictionary<string, uint>();
+            _context["playerSequences"] = seqs;
+        }
+
+        for (int i = 0; i < count; i++)
+        {
+            var name = $"Player{i + 1}";
+            if (!PlayerIds.ContainsKey(name))
+            {
+                var playerId = new UUID
+                {
+                    Value = ByteString.CopyFrom(Guid.NewGuid().ToByteArray()),
+                };
+                PlayerIds[name] = playerId;
+
+                if (!seqs!.TryGetValue(name, out var seq))
+                    seq = 0;
+                seqs[name] = seq + 1;
+
+                var regCmd = new RegisterPlayer
+                {
+                    DisplayName = name,
+                    Email = $"{name.ToLower()}@example.com",
+                    PlayerType = PlayerType.Human,
+                };
+                await Client.SendCommandAsync("player", playerId, regCmd, seq);
+
+                seq = seqs[name];
+                seqs[name] = seq + 1;
+                var depCmd = new DepositFunds
+                {
+                    Amount = new Currency { Amount = 1000, CurrencyCode = "CHIPS" },
+                };
+                await Client.SendCommandAsync("player", playerId, depCmd, seq);
+            }
+
+            var pid = PlayerIds[name];
+            var joinCmd = new JoinTable
+            {
+                PlayerRoot = pid.Value,
+                PreferredSeat = i,
+                BuyInAmount = 500,
+            };
+            await Client.SendCommandAsync("table", tableId, joinCmd, NextTableSequence(tableName));
+        }
+    }
+
+    [Given(@"a table ""(.*)"" with an active hand")]
+    public async Task GivenTableWithActiveHand(string tableName)
+    {
+        await GivenTableWithNSeatedPlayers(tableName, 2);
+    }
+
+    [Given(@"a Five Card Draw table ""(.*)"" with blinds (\d+)/(\d+)")]
+    public async Task GivenFiveCardDrawTable(string name, int smallBlind, int bigBlind)
+    {
+        var tableId = GetOrCreateTableId(name);
+        var cmd = new CreateTable
+        {
+            TableName = name,
+            GameVariant = GameVariant.FiveCardDraw,
+            SmallBlind = smallBlind,
+            BigBlind = bigBlind,
+            MinBuyIn = 200,
+            MaxBuyIn = 1000,
+            MaxPlayers = 9,
+        };
+        var response = await Client.SendCommandAsync(
+            "table",
+            tableId,
+            cmd,
+            NextTableSequence(name)
+        );
+        response.Events.Should().NotBeNull();
+        _context[$"lastTableResponse:{name}"] = response;
+    }
+
+    [Given(@"an Omaha table ""(.*)"" with blinds (\d+)/(\d+)")]
+    public async Task GivenOmahaTable(string name, int smallBlind, int bigBlind)
+    {
+        var tableId = GetOrCreateTableId(name);
+        var cmd = new CreateTable
+        {
+            TableName = name,
+            GameVariant = GameVariant.Omaha,
+            SmallBlind = smallBlind,
+            BigBlind = bigBlind,
+            MinBuyIn = 200,
+            MaxBuyIn = 2000,
+            MaxPlayers = 9,
+        };
+        var response = await Client.SendCommandAsync(
+            "table",
+            tableId,
+            cmd,
+            NextTableSequence(name)
+        );
+        response.Events.Should().NotBeNull();
+        _context[$"lastTableResponse:{name}"] = response;
+    }
+
+    [Given(@"seated players:")]
+    public async Task GivenSeatedPlayers(TechTalk.SpecFlow.Table table)
+    {
+        // Seat players at the most recently created table
+        // Find the last table created
+        string? lastTable = null;
+        foreach (var key in TableIds.Keys)
+            lastTable = key;
+
+        if (lastTable == null)
+            throw new InvalidOperationException("No table has been created yet");
+
+        var tableId = TableIds[lastTable];
+
+        if (!_context.TryGetValue("playerSequences", out Dictionary<string, uint>? seqs))
+        {
+            seqs = new Dictionary<string, uint>();
+            _context["playerSequences"] = seqs;
+        }
+
+        foreach (var row in table.Rows)
+        {
+            var name = row["name"];
+            var seat = int.Parse(row["seat"]);
+            var stack = int.Parse(row["stack"]);
+
+            if (!PlayerIds.ContainsKey(name))
+            {
+                var playerId = new UUID
+                {
+                    Value = ByteString.CopyFrom(Guid.NewGuid().ToByteArray()),
+                };
+                PlayerIds[name] = playerId;
+
+                if (!seqs!.TryGetValue(name, out var seq))
+                    seq = 0;
+                seqs[name] = seq + 1;
+
+                var regCmd = new RegisterPlayer
+                {
+                    DisplayName = name,
+                    Email = $"{name.ToLower()}@example.com",
+                    PlayerType = PlayerType.Human,
+                };
+                await Client.SendCommandAsync("player", playerId, regCmd, seq);
+
+                seq = seqs[name];
+                seqs[name] = seq + 1;
+                var depCmd = new DepositFunds
+                {
+                    Amount = new Currency { Amount = stack * 2, CurrencyCode = "CHIPS" },
+                };
+                await Client.SendCommandAsync("player", playerId, depCmd, seq);
+            }
+
+            var pid = PlayerIds[name];
+            var joinCmd = new JoinTable
+            {
+                PlayerRoot = pid.Value,
+                PreferredSeat = seat,
+                BuyInAmount = stack,
+            };
+            await Client.SendCommandAsync(
+                "table",
+                tableId,
+                joinCmd,
+                NextTableSequence(lastTable)
+            );
+        }
+    }
+
+    [When(@"I send a StartHand command to table ""(.*)""")]
+    public async Task WhenSendStartHandCommand(string tableName)
+    {
+        var tableId = GetOrCreateTableId(tableName);
+        var cmd = new StartHand();
+        var response = await Client.SendCommandAsync(
+            "table",
+            tableId,
+            cmd,
+            NextTableSequence(tableName)
+        );
+        response.Events.Should().NotBeNull();
+        _context[$"lastTableResponse:{tableName}"] = response;
+    }
+
+    [When(@"a hand starts at table ""(.*)""")]
+    public async Task WhenHandStartsAtTable(string tableName)
+    {
+        await WhenSendStartHandCommand(tableName);
     }
 }
