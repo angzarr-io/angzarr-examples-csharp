@@ -42,7 +42,7 @@ jobs:
         run: dotnet build Angzarr.Examples.sln --configuration Release --no-restore
 
       - name: Test
-        run: dotnet test Angzarr.Examples.sln --configuration Release --no-build --verbosity normal --filter "TestCategory!=Acceptance"
+        run: dotnet test Angzarr.Examples.sln --configuration Release --no-build --verbosity normal --filter "TestCategory!=Acceptance&TestCategory!=e2e&TestCategory!=sync-mode&TestCategory!=cascade-error"
 
   build-images:
     name: Build & Push Images
@@ -397,7 +397,7 @@ jobs:
           dotnet test Tests/Tests.csproj \
             --configuration Release \
             --no-build \
-            --filter "TestCategory=Acceptance" \
+            --filter "TestCategory=Acceptance|TestCategory=e2e" \
             --verbosity normal \
             --logger "console;verbosity=detailed"
 

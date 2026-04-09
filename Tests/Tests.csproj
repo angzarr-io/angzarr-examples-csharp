@@ -32,5 +32,9 @@
             Include="../features/**/*.feature"
             Link="Features/%(RecursiveDir)%(FileName)%(Extension)"
         />
+        <Compile
+            Include="../features/**/*.feature.cs"
+            Link="Features/%(RecursiveDir)%(FileName)%(Extension)"
+        />
     </ItemGroup>
 </Project>
