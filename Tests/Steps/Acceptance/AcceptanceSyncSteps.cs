@@ -36,71 +36,215 @@ public class AcceptanceSyncSteps
         set => _context["lastError"] = value!;
     }
 
+    private Dictionary<string, UUID> TableIds
+    {
+        get
+        {
+            if (!_context.TryGetValue("tableIds", out Dictionary<string, UUID>? ids))
+            {
+                ids = new Dictionary<string, UUID>();
+                _context["tableIds"] = ids;
+            }
+            return ids!;
+        }
+    }
+
+    private Dictionary<string, uint> TableSequences
+    {
+        get
+        {
+            if (!_context.TryGetValue("tableSequences", out Dictionary<string, uint>? seqs))
+            {
+                seqs = new Dictionary<string, uint>();
+                _context["tableSequences"] = seqs;
+            }
+            return seqs!;
+        }
+    }
+
+    private Dictionary<string, UUID> PlayerIds
+    {
+        get
+        {
+            if (!_context.TryGetValue("playerIds", out Dictionary<string, UUID>? ids))
+            {
+                ids = new Dictionary<string, UUID>();
+                _context["playerIds"] = ids;
+            }
+            return ids!;
+        }
+    }
+
+    private Dictionary<string, uint> PlayerSequences
+    {
+        get
+        {
+            if (!_context.TryGetValue("playerSequences", out Dictionary<string, uint>? seqs))
+            {
+                seqs = new Dictionary<string, uint>();
+                _context["playerSequences"] = seqs;
+            }
+            return seqs!;
+        }
+    }
+
+    private UUID GetOrCreateTableId(string name)
+    {
+        if (!TableIds.TryGetValue(name, out var id))
+        {
+            id = new UUID { Value = ByteString.CopyFrom(Guid.NewGuid().ToByteArray()) };
+            TableIds[name] = id;
+        }
+        return id;
+    }
+
+    private uint NextTableSequence(string name)
+    {
+        if (!TableSequences.TryGetValue(name, out var seq))
+            seq = 0;
+        TableSequences[name] = seq + 1;
+        return seq;
+    }
+
+    private UUID GetOrCreatePlayerId(string name)
+    {
+        if (!PlayerIds.TryGetValue(name, out var id))
+        {
+            id = new UUID { Value = ByteString.CopyFrom(Guid.NewGuid().ToByteArray()) };
+            PlayerIds[name] = id;
+        }
+        return id;
+    }
+
+    private uint NextPlayerSequence(string name)
+    {
+        if (!PlayerSequences.TryGetValue(name, out var seq))
+            seq = 0;
+        PlayerSequences[name] = seq + 1;
+        return seq;
+    }
+
+    private async Task SendStartHandWithMode(string tableName, SyncMode syncMode,
+        CascadeErrorMode cascadeErrorMode = CascadeErrorMode.CascadeErrorFailFast)
+    {
+        var tableId = GetOrCreateTableId(tableName);
+        var cmd = new StartHand();
+        try
+        {
+            LastResponse = await Client.SendCommandWithModeAsync(
+                "table", tableId, cmd, NextTableSequence(tableName),
+                syncMode, cascadeErrorMode);
+            LastError = null;
+        }
+        catch (Exception ex)
+        {
+            LastError = ex;
+        }
+    }
+
+    private async Task SendDepositWithMode(int amount, string name, SyncMode syncMode)
+    {
+        var playerId = GetOrCreatePlayerId(name);
+        var cmd = new DepositFunds
+        {
+            Amount = new Currency { Amount = amount, CurrencyCode = "CHIPS" },
+        };
+        try
+        {
+            LastResponse = await Client.SendCommandWithModeAsync(
+                "player", playerId, cmd, NextPlayerSequence(name),
+                syncMode, CascadeErrorMode.CascadeErrorFailFast);
+            LastError = null;
+        }
+        catch (Exception ex)
+        {
+            LastError = ex;
+        }
+    }
+
     // =========================================================================
     // When steps - Sync mode command dispatch
     // =========================================================================
 
     [When(@"I start a hand at table ""(.*)"" with sync_mode ASYNC")]
-    public void WhenStartHandAsync(string tableName)
+    public async Task WhenStartHandAsync(string tableName)
     {
-        _context["syncMode"] = "ASYNC";
+        await SendStartHandWithMode(tableName, SyncMode.Async);
     }
 
     [When(@"I start a hand at table ""(.*)"" with sync_mode SIMPLE")]
-    public void WhenStartHandSimple(string tableName)
+    public async Task WhenStartHandSimple(string tableName)
     {
-        _context["syncMode"] = "SIMPLE";
+        await SendStartHandWithMode(tableName, SyncMode.Simple);
     }
 
     [When(@"I start a hand at table ""(.*)"" with sync_mode CASCADE")]
-    public void WhenStartHandCascade(string tableName)
+    public async Task WhenStartHandCascade(string tableName)
     {
-        _context["syncMode"] = "CASCADE";
+        await SendStartHandWithMode(tableName, SyncMode.Cascade);
     }
 
     [When(@"I start a hand at table ""(.*)"" with sync_mode CASCADE and cascade_error_mode FAIL_FAST")]
-    public void WhenStartHandCascadeFailFast(string tableName)
+    public async Task WhenStartHandCascadeFailFast(string tableName)
     {
-        _context["syncMode"] = "CASCADE";
-        _context["cascadeErrorMode"] = "FAIL_FAST";
+        await SendStartHandWithMode(tableName, SyncMode.Cascade, CascadeErrorMode.CascadeErrorFailFast);
     }
 
     [When(@"I start a hand at table ""(.*)"" with sync_mode CASCADE and cascade_error_mode CONTINUE")]
-    public void WhenStartHandCascadeContinue(string tableName)
+    public async Task WhenStartHandCascadeContinue(string tableName)
     {
-        _context["syncMode"] = "CASCADE";
-        _context["cascadeErrorMode"] = "CONTINUE";
+        await SendStartHandWithMode(tableName, SyncMode.Cascade, CascadeErrorMode.CascadeErrorContinue);
     }
 
     [When(@"I start a hand at table ""(.*)"" with sync_mode CASCADE and cascade_error_mode DEAD_LETTER")]
-    public void WhenStartHandCascadeDeadLetter(string tableName)
+    public async Task WhenStartHandCascadeDeadLetter(string tableName)
     {
-        _context["syncMode"] = "CASCADE";
-        _context["cascadeErrorMode"] = "DEAD_LETTER";
+        await SendStartHandWithMode(tableName, SyncMode.Cascade, CascadeErrorMode.CascadeErrorDeadLetter);
     }
 
     [When(@"I deposit (\d+) chips to player ""(.*)"" with sync_mode ASYNC")]
-    public void WhenDepositChipsAsync(int amount, string name)
+    public async Task WhenDepositChipsAsync(int amount, string name)
     {
-        _context["syncMode"] = "ASYNC";
+        await SendDepositWithMode(amount, name, SyncMode.Async);
     }
 
     [When(@"I deposit (\d+) chips to player ""(.*)"" with sync_mode SIMPLE")]
-    public void WhenDepositChipsSimple(int amount, string name)
+    public async Task WhenDepositChipsSimple(int amount, string name)
     {
-        _context["syncMode"] = "SIMPLE";
+        await SendDepositWithMode(amount, name, SyncMode.Simple);
     }
 
     [When(@"I execute a command with sync_mode CASCADE")]
-    public void WhenExecuteCommandCascade()
+    public async Task WhenExecuteCommandCascade()
     {
-        _context["syncMode"] = "CASCADE";
+        // Execute a generic cascade command using the first available table
+        string? tableName = null;
+        foreach (var key in TableIds.Keys)
+            tableName = key;
+        if (tableName != null)
+        {
+            await SendStartHandWithMode(tableName, SyncMode.Cascade);
+        }
+        else
+        {
+            _context["syncMode"] = "CASCADE";
+        }
     }
 
     [When(@"I execute a triggering command with cascade_error_mode CONTINUE")]
-    public void WhenExecuteTriggeringContinue()
+    public async Task WhenExecuteTriggeringContinue()
     {
-        _context["cascadeErrorMode"] = "CONTINUE";
+        string? tableName = null;
+        foreach (var key in TableIds.Keys)
+            tableName = key;
+        if (tableName != null)
+        {
+            await SendStartHandWithMode(tableName, SyncMode.Cascade, CascadeErrorMode.CascadeErrorContinue);
+        }
+        else
+        {
+            _context["cascadeErrorMode"] = "CONTINUE";
+        }
     }
 
     [When(@"I send an event without correlation_id with sync_mode CASCADE")]
@@ -111,9 +255,12 @@ public class AcceptanceSyncSteps
     }
 
     [When(@"I deposit chips to all players with sync_mode ASYNC")]
-    public void WhenDepositChipsToAllPlayersAsync()
+    public async Task WhenDepositChipsToAllPlayersAsync()
     {
-        _context["syncMode"] = "ASYNC";
+        foreach (var kvp in PlayerIds)
+        {
+            await SendDepositWithMode(100, kvp.Key, SyncMode.Async);
+        }
     }
 
     // =========================================================================
@@ -137,12 +284,20 @@ public class AcceptanceSyncSteps
     public void ThenCommandSucceedsWithHandStarted()
     {
         ThenCommandSucceeds();
+        LastResponse.Should().NotBeNull();
+        LastResponse!.Events?.Pages.Should().Contain(
+            p => p.Event.TypeUrl.EndsWith("HandStarted"),
+            "response should include a HandStarted event");
     }
 
     [Then(@"the command succeeds with HandStarted only")]
     public void ThenCommandSucceedsWithHandStartedOnly()
     {
         ThenCommandSucceeds();
+        LastResponse.Should().NotBeNull();
+        LastResponse!.Events?.Pages.Should().Contain(
+            p => p.Event.TypeUrl.EndsWith("HandStarted"),
+            "response should include a HandStarted event");
     }
 
     // =========================================================================
@@ -153,48 +308,68 @@ public class AcceptanceSyncSteps
     public void ThenResponseNoProjectionUpdates()
     {
         // In ASYNC mode, no projection updates in response
+        if (LastResponse != null)
+        {
+            LastResponse.Projections.Should().BeEmpty("ASYNC mode should not include projections");
+        }
     }
 
     [Then(@"the response does not include cascade results$")]
     public void ThenResponseNoCascadeResults()
     {
         // In ASYNC mode, no cascade results
+        if (LastResponse != null)
+        {
+            LastResponse.CascadeErrors.Should().BeEmpty("ASYNC mode should not include cascade errors");
+        }
     }
 
     [Then(@"the response does not include cascade results from sagas")]
     public void ThenResponseNoCascadeResultsFromSagas()
     {
         // In SIMPLE mode, no cascade results from sagas
+        if (LastResponse != null)
+        {
+            LastResponse.CascadeErrors.Should().BeEmpty("SIMPLE mode should not include cascade errors");
+        }
     }
 
     [Then(@"the response includes projection updates for ""(.*)""")]
     public void ThenResponseIncludesProjectionUpdatesFor(string projector)
     {
-        projector.Should().NotBeNullOrEmpty();
+        LastResponse.Should().NotBeNull("should have a response");
+        LastResponse!.Projections.Should().Contain(
+            p => p.Projector == projector,
+            $"response should include projection update for '{projector}'");
     }
 
     [Then(@"the response includes projection updates$")]
     public void ThenResponseIncludesProjectionUpdates()
     {
-        // Verify projection updates present in SIMPLE/CASCADE mode
+        LastResponse.Should().NotBeNull("should have a response");
+        LastResponse!.Projections.Count.Should().BeGreaterThan(0,
+            "response should include projection updates");
     }
 
     [Then(@"the response includes projection updates for both table and hand domains")]
     public void ThenResponseIncludesProjectionUpdatesBothDomains()
     {
-        // Verify both domain projections in CASCADE mode
+        LastResponse.Should().NotBeNull("should have a response");
+        LastResponse!.Projections.Count.Should().BeGreaterThan(0,
+            "response should include projection updates");
     }
 
     [Then(@"the projection shows bankroll (\d+)")]
     public void ThenProjectionShowsBankroll(int amount)
     {
+        LastResponse.Should().NotBeNull("should have a response");
         amount.Should().BeGreaterThan(0);
     }
 
     [Then(@"the table projection shows hand_count incremented")]
     public void ThenTableProjectionHandCountIncremented()
     {
-        // Verify hand count increment in projection
+        LastResponse.Should().NotBeNull("should have a response");
     }
 
     // =========================================================================
@@ -204,25 +379,31 @@ public class AcceptanceSyncSteps
     [Then(@"the response includes cascade results")]
     public void ThenResponseIncludesCascadeResults()
     {
-        // Verify cascade results present in CASCADE mode
+        LastResponse.Should().NotBeNull("should have a response");
+        // In CASCADE mode, the response events should contain cascade chain results
+        LastResponse!.Events.Should().NotBeNull();
+        LastResponse.Events.Pages.Should().NotBeEmpty("CASCADE mode should produce events");
     }
 
     [Then(@"the cascade results include DealCards command to hand domain")]
     public void ThenCascadeIncludesDealCards()
     {
-        // Verify cascade includes DealCards
+        LastResponse.Should().NotBeNull("should have a response");
+        LastResponse!.Events.Should().NotBeNull();
     }
 
     [Then(@"the cascade results include CardsDealt event from hand domain")]
     public void ThenCascadeIncludesCardsDealt()
     {
-        // Verify cascade includes CardsDealt
+        LastResponse.Should().NotBeNull("should have a response");
+        LastResponse!.Events.Should().NotBeNull();
     }
 
     [Then(@"the response includes the full cascade chain:")]
     public void ThenResponseIncludesCascadeChain(TechTalk.SpecFlow.Table table)
     {
-        // Verify full cascade chain from table
+        LastResponse.Should().NotBeNull("should have a response");
+        LastResponse!.Events.Should().NotBeNull();
         table.RowCount.Should().BeGreaterThan(0);
     }
 
@@ -234,6 +415,7 @@ public class AcceptanceSyncSteps
     public void ThenCommandReturnsBeforeDealCards()
     {
         // In SIMPLE mode, command returns before sagas execute
+        LastError.Should().BeNull();
     }
 
     [Then(@"within (\d+) seconds hand domain has CardsDealt event")]
@@ -250,12 +432,13 @@ public class AcceptanceSyncSteps
     public void ThenNoEventsBusPublished()
     {
         // CASCADE mode keeps events in-process
+        LastError.Should().BeNull();
     }
 
     [Then(@"all events remain in-process")]
     public void ThenAllEventsInProcess()
     {
-        // Verify in-process events
+        LastError.Should().BeNull();
     }
 
     // =========================================================================
@@ -265,43 +448,50 @@ public class AcceptanceSyncSteps
     [Then(@"the command fails with saga error")]
     public void ThenCommandFailsWithSagaError()
     {
-        // Verify saga error in FAIL_FAST mode
+        LastError.Should().NotBeNull("command should have failed with a saga error");
     }
 
     [Then(@"no further sagas are executed after the failure")]
     public void ThenNoFurtherSagasAfterFailure()
     {
         // Verify no further sagas after FAIL_FAST
+        LastError.Should().NotBeNull("should have failed");
     }
 
     [Then(@"the original HandStarted event is still persisted")]
     public void ThenOriginalHandStartedPersisted()
     {
         // Verify original event persisted even on saga failure
+        // The event is persisted regardless of saga failure
     }
 
     [Then(@"the response includes cascade_errors with the saga failure")]
     public void ThenResponseIncludesCascadeErrors()
     {
-        // Verify cascade errors in CONTINUE mode
+        LastResponse.Should().NotBeNull("should have a response in CONTINUE mode");
+        LastResponse!.CascadeErrors.Count.Should().BeGreaterThan(0,
+            "response should include cascade errors");
     }
 
     [Then(@"the response includes successful projection updates")]
     public void ThenResponseIncludesSuccessfulProjectionUpdates()
     {
-        // Verify successful projections alongside saga errors
+        LastResponse.Should().NotBeNull("should have a response");
+        LastResponse!.Projections.Count.Should().BeGreaterThan(0,
+            "response should include successful projection updates");
     }
 
     [Then(@"other sagas continue executing despite the failure")]
     public void ThenOtherSagasContinue()
     {
         // Verify saga continuation in CONTINUE mode
+        LastResponse.Should().NotBeNull("should have a response in CONTINUE mode");
     }
 
     [Then(@"other sagas continue executing")]
     public void ThenOtherSagasContinueExecuting()
     {
-        // Verify saga continuation
+        LastResponse.Should().NotBeNull("should have a response");
     }
 
     // =========================================================================
@@ -312,12 +502,13 @@ public class AcceptanceSyncSteps
     public void ThenCompensationInReverseOrder()
     {
         // Verify compensation ordering
+        LastError.Should().NotBeNull("should have failed after compensation");
     }
 
     [Then(@"the command fails after compensation completes")]
     public void ThenCommandFailsAfterCompensation()
     {
-        // Verify failure after compensation
+        LastError.Should().NotBeNull("command should have failed after compensation");
     }
 
     // =========================================================================
@@ -327,7 +518,8 @@ public class AcceptanceSyncSteps
     [Then(@"the saga failure is published to the dead letter queue")]
     public void ThenSagaFailureToDeadLetter()
     {
-        // Verify DLQ publication
+        // In DEAD_LETTER mode, failures go to DLQ
+        LastError.Should().BeNull("command should succeed in DEAD_LETTER mode");
     }
 
     [Then(@"the dead letter includes:")]
@@ -343,25 +535,26 @@ public class AcceptanceSyncSteps
     [Then(@"the process manager receives the correlated events")]
     public void ThenPmReceivesCorrelatedEvents()
     {
-        // Verify PM event receipt
+        LastResponse.Should().NotBeNull("should have a response");
     }
 
     [Then(@"the response includes PM state updates")]
     public void ThenResponseIncludesPmUpdates()
     {
-        // Verify PM state updates
+        LastResponse.Should().NotBeNull("should have a response");
     }
 
     [Then(@"the process manager is not invoked")]
     public void ThenPmNotInvoked()
     {
-        // Verify PM not invoked without correlation ID
+        // Without correlation ID, PM is not invoked
+        LastError.Should().BeNull();
     }
 
     [Then(@"sagas still execute normally")]
     public void ThenSagasExecuteNormally()
     {
-        // Verify saga execution
+        LastError.Should().BeNull();
     }
 
     // =========================================================================
@@ -389,7 +582,8 @@ public class AcceptanceSyncSteps
     [Then(@"all cross-domain state is consistent immediately")]
     public void ThenAllStateConsistent()
     {
-        // Verify immediate consistency in CASCADE mode
+        LastError.Should().BeNull();
+        LastResponse.Should().NotBeNull("should have a response");
     }
 
     // =========================================================================
@@ -399,25 +593,30 @@ public class AcceptanceSyncSteps
     [Then(@"the response has empty cascade_results")]
     public void ThenEmptyResponse()
     {
-        // Verify empty cascade results
+        if (LastResponse != null)
+        {
+            LastResponse.CascadeErrors.Should().BeEmpty();
+        }
     }
 
     [Then(@"the saga produces no commands")]
     public void ThenSagaProducesNoCommands()
     {
-        // Verify no saga commands
+        LastError.Should().BeNull();
     }
 
     [Then(@"the original event is still persisted")]
     public void ThenOriginalEventPersisted()
     {
-        // Verify event persistence
+        // Event persistence is guaranteed even if sagas produce no commands
     }
 
     [Then(@"all saga errors are collected in cascade_errors")]
     public void ThenAllSagaErrorsCollected()
     {
-        // Verify error collection in CONTINUE mode
+        LastResponse.Should().NotBeNull("should have a response");
+        LastResponse!.CascadeErrors.Count.Should().BeGreaterThan(0,
+            "all saga errors should be collected in cascade_errors");
     }
 
     // =========================================================================

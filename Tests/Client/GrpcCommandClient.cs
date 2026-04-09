@@ -31,11 +31,25 @@ public class GrpcCommandClient : ICommandClient, IDisposable
         };
     }
 
-    public async Task<CommandResponse> SendCommandAsync(
+    public Task<CommandResponse> SendCommandAsync(
         string domain,
         UUID rootId,
         IMessage command,
         uint sequence = 0
+    )
+    {
+        return SendCommandWithModeAsync(
+            domain, rootId, command, sequence,
+            SyncMode.Simple, CascadeErrorMode.CascadeErrorFailFast);
+    }
+
+    public async Task<CommandResponse> SendCommandWithModeAsync(
+        string domain,
+        UUID rootId,
+        IMessage command,
+        uint sequence,
+        SyncMode syncMode,
+        CascadeErrorMode cascadeErrorMode
     )
     {
         var client = GetClient(domain);
@@ -65,7 +79,8 @@ public class GrpcCommandClient : ICommandClient, IDisposable
                     },
                 },
             },
-            SyncMode = SyncMode.Simple,
+            SyncMode = syncMode,
+            CascadeErrorMode = cascadeErrorMode,
         };
 
         return await client.HandleCommandAsync(request);

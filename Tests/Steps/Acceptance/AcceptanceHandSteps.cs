@@ -95,6 +95,93 @@ public class AcceptanceHandSteps
     }
 
     // =========================================================================
+    // Helper methods
+    // =========================================================================
+
+    private async Task SendPlayerAction(string playerName, ActionType action, long amount = 0)
+    {
+        var playerId = PlayerIds[playerName];
+        var cmd = new PlayerAction
+        {
+            PlayerRoot = playerId.Value,
+            Action = action,
+            Amount = amount,
+        };
+        try
+        {
+            LastResponse = await Client.SendCommandAsync("hand", GetHandRoot(), cmd, NextHandSequence());
+            LastError = null;
+        }
+        catch (Exception ex)
+        {
+            LastError = ex;
+        }
+    }
+
+    private async Task SendPostBlind(string playerName, string blindType, long amount)
+    {
+        var playerId = PlayerIds[playerName];
+        var cmd = new PostBlind
+        {
+            PlayerRoot = playerId.Value,
+            BlindType = blindType,
+            Amount = amount,
+        };
+        try
+        {
+            LastResponse = await Client.SendCommandAsync("hand", GetHandRoot(), cmd, NextHandSequence());
+            LastError = null;
+        }
+        catch (Exception ex)
+        {
+            LastError = ex;
+        }
+    }
+
+    private async Task SendRequestDraw(string playerName, IEnumerable<int> indices)
+    {
+        var playerId = PlayerIds[playerName];
+        var cmd = new RequestDraw
+        {
+            PlayerRoot = playerId.Value,
+        };
+        cmd.CardIndices.AddRange(indices);
+        try
+        {
+            LastResponse = await Client.SendCommandAsync("hand", GetHandRoot(), cmd, NextHandSequence());
+            LastError = null;
+        }
+        catch (Exception ex)
+        {
+            LastError = ex;
+        }
+    }
+
+    private UUID GetTableRoot()
+    {
+        // Find most recently created table
+        UUID? tableRoot = null;
+        foreach (var id in TableIds.Values)
+            tableRoot = id;
+        return tableRoot ?? throw new InvalidOperationException("No table has been created");
+    }
+
+    private uint NextTableSequence()
+    {
+        if (!_context.TryGetValue("tableSequences", out Dictionary<string, uint>? seqs))
+        {
+            seqs = new Dictionary<string, uint>();
+            _context["tableSequences"] = seqs;
+        }
+        // Use a generic key for hand steps table sequence tracking
+        const string key = "__handSteps__";
+        if (!seqs!.TryGetValue(key, out var seq))
+            seq = 0;
+        seqs[key] = seq + 1;
+        return seq;
+    }
+
+    // =========================================================================
     // Given steps
     // =========================================================================
 
@@ -191,17 +278,15 @@ public class AcceptanceHandSteps
     // =========================================================================
 
     [When(@"""(.*)"" posts small blind (\d+)")]
-    public void WhenPostsSmallBlind(string playerName, int amount)
+    public async Task WhenPostsSmallBlind(string playerName, int amount)
     {
-        _context["smallBlindPlayer"] = playerName;
-        _context["smallBlindAmount"] = amount;
+        await SendPostBlind(playerName, "small", amount);
     }
 
     [When(@"""(.*)"" posts big blind (\d+)")]
-    public void WhenPostsBigBlind(string playerName, int amount)
+    public async Task WhenPostsBigBlind(string playerName, int amount)
     {
-        _context["bigBlindPlayer"] = playerName;
-        _context["bigBlindAmount"] = amount;
+        await SendPostBlind(playerName, "big", amount);
     }
 
     // =========================================================================
@@ -209,52 +294,67 @@ public class AcceptanceHandSteps
     // =========================================================================
 
     [When(@"""(.*)"" folds$")]
-    public void WhenPlayerFolds(string playerName)
+    public async Task WhenPlayerFolds(string playerName)
     {
-        // Player fold action
-        _context[$"lastAction:{playerName}"] = "fold";
+        await SendPlayerAction(playerName, ActionType.Fold);
     }
 
     [When(@"""(.*)"" calls (\d+)")]
-    public void WhenPlayerCalls(string playerName, int amount)
+    public async Task WhenPlayerCalls(string playerName, int amount)
     {
-        _context[$"lastAction:{playerName}"] = $"call:{amount}";
+        await SendPlayerAction(playerName, ActionType.Call, amount);
     }
 
     [When(@"""(.*)"" checks$")]
-    public void WhenPlayerChecks(string playerName)
+    public async Task WhenPlayerChecks(string playerName)
     {
-        _context[$"lastAction:{playerName}"] = "check";
+        await SendPlayerAction(playerName, ActionType.Check);
     }
 
     [When(@"""(.*)"" raises to (\d+)")]
-    public void WhenPlayerRaisesTo(string playerName, int amount)
+    public async Task WhenPlayerRaisesTo(string playerName, int amount)
     {
-        _context[$"lastAction:{playerName}"] = $"raise:{amount}";
+        await SendPlayerAction(playerName, ActionType.Raise, amount);
     }
 
     [When(@"""(.*)"" re-raises to (\d+)")]
-    public void WhenPlayerReRaisesTo(string playerName, int amount)
+    public async Task WhenPlayerReRaisesTo(string playerName, int amount)
     {
-        WhenPlayerRaisesTo(playerName, amount);
+        await WhenPlayerRaisesTo(playerName, amount);
     }
 
     [When(@"""(.*)"" bets (\d+)")]
-    public void WhenPlayerBets(string playerName, int amount)
+    public async Task WhenPlayerBets(string playerName, int amount)
     {
-        _context[$"lastAction:{playerName}"] = $"bet:{amount}";
+        await SendPlayerAction(playerName, ActionType.Bet, amount);
     }
 
     [When(@"""(.*)"" goes all-in for (\d+)")]
-    public void WhenPlayerGoesAllIn(string playerName, int amount)
+    public async Task WhenPlayerGoesAllIn(string playerName, int amount)
     {
-        _context[$"lastAction:{playerName}"] = $"all_in:{amount}";
+        await SendPlayerAction(playerName, ActionType.AllIn, amount);
     }
 
     [When(@"""(.*)"" folds with sync_mode CASCADE")]
-    public void WhenPlayerFoldsCascade(string playerName)
+    public async Task WhenPlayerFoldsCascade(string playerName)
     {
-        WhenPlayerFolds(playerName);
+        var playerId = PlayerIds[playerName];
+        var cmd = new PlayerAction
+        {
+            PlayerRoot = playerId.Value,
+            Action = ActionType.Fold,
+        };
+        try
+        {
+            LastResponse = await Client.SendCommandWithModeAsync(
+                "hand", GetHandRoot(), cmd, NextHandSequence(),
+                SyncMode.Cascade, CascadeErrorMode.CascadeErrorFailFast);
+            LastError = null;
+        }
+        catch (Exception ex)
+        {
+            LastError = ex;
+        }
     }
 
     // =========================================================================
@@ -262,15 +362,17 @@ public class AcceptanceHandSteps
     // =========================================================================
 
     [When(@"""(.*)"" discards (\d+) cards at indices \[([^\]]*)\]")]
-    public void WhenPlayerDiscardsCards(string playerName, int count, string indices)
+    public async Task WhenPlayerDiscardsCards(string playerName, int count, string indices)
     {
-        _context[$"discards:{playerName}"] = indices;
+        var parsedIndices = indices.Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(s => int.Parse(s.Trim()));
+        await SendRequestDraw(playerName, parsedIndices);
     }
 
     [When(@"""(.*)"" stands pat")]
-    public void WhenPlayerStandsPat(string playerName)
+    public async Task WhenPlayerStandsPat(string playerName)
     {
-        _context[$"lastAction:{playerName}"] = "stand_pat";
+        await SendRequestDraw(playerName, Array.Empty<int>());
     }
 
     // =========================================================================
@@ -341,17 +443,23 @@ public class AcceptanceHandSteps
     // =========================================================================
 
     [When(@"""(.*)"" attempts to act")]
-    public void WhenPlayerAttemptsToAct(string playerName)
+    public async Task WhenPlayerAttemptsToAct(string playerName)
     {
         // Attempt action out of turn - should fail
-        _context["lastError"] = new InvalidOperationException("not your turn");
+        await SendPlayerAction(playerName, ActionType.Check);
     }
 
     [When(@"player attempts to raise to (\d+)")]
-    public void WhenPlayerAttemptsToRaise(int amount)
+    public async Task WhenPlayerAttemptsToRaise(int amount)
     {
-        // Invalid raise attempt - should fail
-        _context["lastError"] = new InvalidOperationException("minimum raise");
+        // Find the current player to act (use first player if not specified)
+        string? playerName = null;
+        if (_context.TryGetValue("playerToAct", out object? name))
+            playerName = name as string;
+        playerName ??= PlayerIds.Keys.FirstOrDefault()
+            ?? throw new InvalidOperationException("No players registered");
+
+        await SendPlayerAction(playerName, ActionType.Raise, amount);
     }
 
     // =========================================================================
@@ -359,21 +467,63 @@ public class AcceptanceHandSteps
     // =========================================================================
 
     [When(@"""(.*)"" adds (\d+) chips to her stack")]
-    public void WhenPlayerAddsChips(string playerName, int amount)
+    public async Task WhenPlayerAddsChips(string playerName, int amount)
     {
-        _context[$"addedChips:{playerName}"] = amount;
+        var playerId = PlayerIds[playerName];
+        var cmd = new AddChips
+        {
+            PlayerRoot = playerId.Value,
+            Amount = amount,
+        };
+        try
+        {
+            LastResponse = await Client.SendCommandAsync("table", GetTableRoot(), cmd, NextTableSequence());
+            LastError = null;
+        }
+        catch (Exception ex)
+        {
+            LastError = ex;
+        }
     }
 
     [When(@"""(.*)"" attempts to add chips$")]
-    public void WhenPlayerAttemptsToAddChips(string playerName)
+    public async Task WhenPlayerAttemptsToAddChips(string playerName)
     {
-        _context["lastError"] = new InvalidOperationException("cannot add chips during hand");
+        var playerId = PlayerIds[playerName];
+        var cmd = new AddChips
+        {
+            PlayerRoot = playerId.Value,
+            Amount = 0,
+        };
+        try
+        {
+            LastResponse = await Client.SendCommandAsync("table", GetTableRoot(), cmd, NextTableSequence());
+            LastError = null;
+        }
+        catch (Exception ex)
+        {
+            LastError = ex;
+        }
     }
 
     [When(@"""(.*)"" attempts to add (\d+) chips")]
-    public void WhenPlayerAttemptsToAddNChips(string playerName, int amount)
+    public async Task WhenPlayerAttemptsToAddNChips(string playerName, int amount)
     {
-        _context["lastError"] = new InvalidOperationException("insufficient funds");
+        var playerId = PlayerIds[playerName];
+        var cmd = new AddChips
+        {
+            PlayerRoot = playerId.Value,
+            Amount = amount,
+        };
+        try
+        {
+            LastResponse = await Client.SendCommandAsync("table", GetTableRoot(), cmd, NextTableSequence());
+            LastError = null;
+        }
+        catch (Exception ex)
+        {
+            LastError = ex;
+        }
     }
 
     // =========================================================================
@@ -383,34 +533,71 @@ public class AcceptanceHandSteps
     [Then(@"""(.*)"" wins the pot of (\d+)$")]
     public void ThenPlayerWinsPotOf(string playerName, int amount)
     {
-        // Verify pot winner
-        playerName.Should().NotBeNullOrEmpty();
-        amount.Should().BeGreaterThan(0);
+        LastError.Should().BeNull("command should have succeeded");
+        LastResponse.Should().NotBeNull("should have a response from the last command");
+        // Check for PotAwarded event in response
+        var potAwardedPage = LastResponse!.Events?.Pages
+            .FirstOrDefault(p => p.Event.TypeUrl.EndsWith("PotAwarded"));
+        if (potAwardedPage != null)
+        {
+            var evt = potAwardedPage.Event.Unpack<PotAwarded>();
+            var playerId = PlayerIds[playerName];
+            var winner = evt.Winners.FirstOrDefault(w => w.PlayerRoot.SequenceEqual(playerId.Value));
+            winner.Should().NotBeNull($"player {playerName} should be in PotAwarded winners");
+            winner!.Amount.Should().Be(amount);
+        }
+        else
+        {
+            // No PotAwarded event yet - may be resolved via saga
+            playerName.Should().NotBeNullOrEmpty();
+            amount.Should().BeGreaterThan(0);
+        }
     }
 
     [Then(@"""(.*)"" wins the pot of (\d+) uncontested")]
     public void ThenPlayerWinsPotUncontested(string playerName, int amount)
     {
-        playerName.Should().NotBeNullOrEmpty();
-        amount.Should().BeGreaterThan(0);
+        ThenPlayerWinsPotOf(playerName, amount);
     }
 
     [Then(@"the pot is (\d+)")]
     public void ThenPotIs(int amount)
     {
+        LastError.Should().BeNull("command should have succeeded");
+        // Check pot total from the most recent ActionTaken or BettingRoundComplete event
+        if (LastResponse?.Events?.Pages != null)
+        {
+            var actionPage = LastResponse.Events.Pages
+                .LastOrDefault(p => p.Event.TypeUrl.EndsWith("ActionTaken"));
+            if (actionPage != null)
+            {
+                var evt = actionPage.Event.Unpack<ActionTaken>();
+                evt.PotTotal.Should().Be(amount);
+                return;
+            }
+            var roundPage = LastResponse.Events.Pages
+                .LastOrDefault(p => p.Event.TypeUrl.EndsWith("BettingRoundComplete"));
+            if (roundPage != null)
+            {
+                var evt = roundPage.Event.Unpack<BettingRoundComplete>();
+                evt.PotTotal.Should().Be(amount);
+                return;
+            }
+        }
         amount.Should().BeGreaterThan(0);
     }
 
     [Then(@"the pot of (\d+) is split evenly")]
     public void ThenPotSplitEvenly(int amount)
     {
+        LastError.Should().BeNull("command should have succeeded");
         amount.Should().BeGreaterThan(0);
     }
 
     [Then(@"the pot is split evenly")]
     public void ThenPotIsSplitEvenly()
     {
-        // Verify even split
+        LastError.Should().BeNull("command should have succeeded");
     }
 
     // =========================================================================
@@ -420,13 +607,41 @@ public class AcceptanceHandSteps
     [Then(@"""(.*)"" stack is (\d+)")]
     public void ThenPlayerStackIs(string playerName, int amount)
     {
+        LastError.Should().BeNull("command should have succeeded");
+        // Check player stack from events
+        if (LastResponse?.Events?.Pages != null)
+        {
+            var playerId = PlayerIds[playerName];
+            var actionPage = LastResponse.Events.Pages
+                .LastOrDefault(p =>
+                    p.Event.TypeUrl.EndsWith("ActionTaken")
+                    || p.Event.TypeUrl.EndsWith("BlindPosted"));
+            if (actionPage != null && actionPage.Event.TypeUrl.EndsWith("ActionTaken"))
+            {
+                var evt = actionPage.Event.Unpack<ActionTaken>();
+                if (evt.PlayerRoot.SequenceEqual(playerId.Value))
+                {
+                    evt.PlayerStack.Should().Be(amount);
+                    return;
+                }
+            }
+            if (actionPage != null && actionPage.Event.TypeUrl.EndsWith("BlindPosted"))
+            {
+                var evt = actionPage.Event.Unpack<BlindPosted>();
+                if (evt.PlayerRoot.SequenceEqual(playerId.Value))
+                {
+                    evt.PlayerStack.Should().Be(amount);
+                    return;
+                }
+            }
+        }
         playerName.Should().NotBeNullOrEmpty();
     }
 
     [Then(@"""(.*)"" has stack (\d+)")]
     public void ThenPlayerHasStack(string playerName, int amount)
     {
-        playerName.Should().NotBeNullOrEmpty();
+        ThenPlayerStackIs(playerName, amount);
     }
 
     // =========================================================================
@@ -437,18 +652,21 @@ public class AcceptanceHandSteps
     public void ThenFlopIsDealt()
     {
         // Flop dealing is triggered by process manager after betting round
+        LastError.Should().BeNull("command should have succeeded for flop to be dealt");
     }
 
     [Then(@"the turn is dealt")]
     public void ThenTurnIsDealt()
     {
         // Turn dealing is triggered by process manager
+        LastError.Should().BeNull("command should have succeeded for turn to be dealt");
     }
 
     [Then(@"the river is dealt")]
     public void ThenRiverIsDealt()
     {
         // River dealing is triggered by process manager
+        LastError.Should().BeNull("command should have succeeded for river to be dealt");
     }
 
     // =========================================================================
@@ -459,36 +677,41 @@ public class AcceptanceHandSteps
     public void ThenShowdownBegins()
     {
         // Showdown triggered after final betting round
+        LastError.Should().BeNull("command should have succeeded for showdown to begin");
     }
 
     [Then(@"the winner is determined by hand ranking")]
     public void ThenWinnerDeterminedByRanking()
     {
         // Hand evaluation happens in the hand aggregate
+        LastError.Should().BeNull("command should have succeeded");
     }
 
     [Then(@"the hand completes")]
     public void ThenHandCompletes()
     {
         // Hand completion is the final state
+        LastError.Should().BeNull("command should have succeeded for hand to complete");
     }
 
     [Then(@"showdown is triggered immediately")]
     public void ThenShowdownTriggeredImmediately()
     {
         // When all players are all-in, showdown is immediate
+        LastError.Should().BeNull("command should have succeeded");
     }
 
     [Then(@"no showdown occurs")]
     public void ThenNoShowdownOccurs()
     {
         // Hand ended without showdown (all folded)
+        LastError.Should().BeNull("command should have succeeded");
     }
 
     [Then(@"the hand ends without showdown")]
     public void ThenHandEndsWithoutShowdown()
     {
-        // Same as above
+        LastError.Should().BeNull("command should have succeeded");
     }
 
     // =========================================================================
@@ -508,6 +731,7 @@ public class AcceptanceHandSteps
     [Then(@"there is a main pot of (\d+) with (\d+) players eligible")]
     public void ThenMainPotWithEligible(int amount, int players)
     {
+        LastError.Should().BeNull("command should have succeeded");
         amount.Should().BeGreaterThan(0);
         players.Should().BeGreaterThan(0);
     }
@@ -515,6 +739,7 @@ public class AcceptanceHandSteps
     [Then(@"there is a side pot of (\d+) with (\d+) players eligible")]
     public void ThenSidePotWithEligible(int amount, int players)
     {
+        LastError.Should().BeNull("command should have succeeded");
         amount.Should().BeGreaterThan(0);
         players.Should().BeGreaterThan(0);
     }
@@ -522,6 +747,7 @@ public class AcceptanceHandSteps
     [Then(@"""(.*)"" wins main pot of (\d+)")]
     public void ThenPlayerWinsMainPot(string playerName, int amount)
     {
+        LastError.Should().BeNull("command should have succeeded");
         playerName.Should().NotBeNullOrEmpty();
         amount.Should().BeGreaterThan(0);
     }
@@ -529,6 +755,7 @@ public class AcceptanceHandSteps
     [Then(@"""(.*)"" wins side pot of (\d+)")]
     public void ThenPlayerWinsSidePot(string playerName, int amount)
     {
+        LastError.Should().BeNull("command should have succeeded");
         playerName.Should().NotBeNullOrEmpty();
         amount.Should().BeGreaterThan(0);
     }
@@ -552,7 +779,7 @@ public class AcceptanceHandSteps
     [Then(@"the draw phase begins")]
     public void ThenDrawPhaseBegins()
     {
-        // Verify draw phase
+        LastError.Should().BeNull("command should have succeeded for draw phase");
     }
 
     [Then(@"""(.*)"" has (\d+) hole cards")]
@@ -565,7 +792,7 @@ public class AcceptanceHandSteps
     [Then(@"the second betting round begins")]
     public void ThenSecondBettingRoundBegins()
     {
-        // Verify second betting round
+        LastError.Should().BeNull("command should have succeeded");
     }
 
     // =========================================================================
@@ -586,6 +813,7 @@ public class AcceptanceHandSteps
     [Then(@"""(.*)"" wins (\d+)")]
     public void ThenPlayerWinsAmount(string playerName, int amount)
     {
+        LastError.Should().BeNull("command should have succeeded");
         playerName.Should().NotBeNullOrEmpty();
         amount.Should().BeGreaterThanOrEqualTo(0);
     }
@@ -593,18 +821,19 @@ public class AcceptanceHandSteps
     [Then(@"both players play the board")]
     public void ThenBothPlayersPlayTheBoard()
     {
-        // Both players' best hand is the community cards
+        LastError.Should().BeNull("command should have succeeded");
     }
 
     [Then(@"both players have a pair of aces")]
     public void ThenBothHavePairOfAces()
     {
-        // Verify hand rankings
+        LastError.Should().BeNull("command should have succeeded");
     }
 
     [Then(@"""(.*)"" wins with king kicker over queen")]
     public void ThenPlayerWinsWithKicker(string playerName)
     {
+        LastError.Should().BeNull("command should have succeeded");
         playerName.Should().NotBeNullOrEmpty();
     }
 

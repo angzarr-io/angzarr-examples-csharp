@@ -24,4 +24,16 @@ public interface ICommandClient
         IMessage command,
         uint sequence = 0
     );
+
+    /// <summary>
+    /// Send a command with explicit sync mode and cascade error mode.
+    /// </summary>
+    Task<CommandResponse> SendCommandWithModeAsync(
+        string domain,
+        UUID rootId,
+        IMessage command,
+        uint sequence,
+        SyncMode syncMode,
+        CascadeErrorMode cascadeErrorMode
+    );
 }
