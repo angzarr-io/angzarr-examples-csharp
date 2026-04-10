@@ -75,7 +75,7 @@ public class ProjectorSteps
             '4' => Rank.Four,
             '3' => Rank.Three,
             '2' => Rank.Two,
-            _ => Rank.RankUnspecified,
+            _ => (Rank)0,
         };
         var suit = notation[1] switch
         {
@@ -83,7 +83,7 @@ public class ProjectorSteps
             'd' => Suit.Diamonds,
             'h' => Suit.Hearts,
             's' => Suit.Spades,
-            _ => Suit.SuitUnspecified,
+            _ => (Suit)0,
         };
         return new Card { Rank = rank, Suit = suit };
     }
@@ -624,7 +624,7 @@ public class ProjectorSteps
             "STRAIGHT_FLUSH" => HandRankType.StraightFlush,
             "ROYAL_FLUSH" => HandRankType.RoyalFlush,
             "HIGH_CARD" => HandRankType.HighCard,
-            _ => HandRankType.HandRankUnspecified,
+            _ => (HandRankType)0,
         };
 
         var evt = new CardsRevealed
@@ -824,7 +824,7 @@ public class ProjectorSteps
                 "DIAMONDS" => Suit.Diamonds,
                 "HEARTS" => Suit.Hearts,
                 "SPADES" => Suit.Spades,
-                _ => Suit.SuitUnspecified,
+                _ => (Suit)0,
             };
             var rank = (Rank)int.Parse(row["rank"]);
             cards.Add(new Card { Suit = suit, Rank = rank });
