@@ -41,6 +41,10 @@ public class SharedSteps
     {
         var error = GetError();
         error.Should().NotBeNull("Expected command to fail but it succeeded");
+        if (error is CommandRejectedError cmdError)
+        {
+            cmdError.Code.Should().Be(status, $"Expected status {status} but got {cmdError.Code}");
+        }
     }
 
     [Then(@"the error message contains ""(.*)""")]
