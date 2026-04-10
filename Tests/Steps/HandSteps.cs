@@ -406,13 +406,42 @@ public class HandSteps
     [Given(@"a showdown with player hands:")]
     public void GivenAShowdownWithPlayerHands(TechTalk.SpecFlow.Table table)
     {
-        GivenAShowdownStartedEventForTheHand();
+        // Store hands for evaluation in "hands are evaluated" step
+        var showdownHands = new Dictionary<string, (List<(Suit, Rank)> Hole, List<(Suit, Rank)> Community)>();
         foreach (var row in table.Rows)
         {
             var playerName = row["player"];
-            var ranking = row.ContainsKey("ranking") ? row["ranking"] : "HIGH_CARD";
-            GivenACardsRevealedEventForPlayerWithRanking(playerName, ranking);
+            var holeCards = ParseCardNotation(row["hole_cards"]);
+            var communityCards = ParseCardNotation(row["community_cards"]);
+            showdownHands[playerName] = (holeCards, communityCards);
         }
+        _scenarioContext["showdownHands"] = showdownHands;
+    }
+
+    private static List<(Suit, Rank)> ParseCardNotation(string notation)
+    {
+        var cards = new List<(Suit, Rank)>();
+        foreach (var part in notation.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+        {
+            if (part.Length < 2) continue;
+            var rank = part[0] switch
+            {
+                'A' => Rank.Ace, 'K' => Rank.King, 'Q' => Rank.Queen,
+                'J' => Rank.Jack, 'T' => Rank.Ten,
+                '9' => Rank.Nine, '8' => Rank.Eight, '7' => Rank.Seven,
+                '6' => Rank.Six, '5' => Rank.Five, '4' => Rank.Four,
+                '3' => Rank.Three, '2' => Rank.Two,
+                _ => Rank.Two
+            };
+            var suit = part[1] switch
+            {
+                's' => Suit.Spades, 'h' => Suit.Hearts,
+                'd' => Suit.Diamonds, 'c' => Suit.Clubs,
+                _ => Suit.Clubs
+            };
+            cards.Add((suit, rank));
+        }
+        return cards;
     }
 
     // ==========================================================================
@@ -541,7 +570,13 @@ public class HandSteps
     [When(@"hands are evaluated")]
     public void WhenHandsAreEvaluated()
     {
-        // Placeholder - evaluation happens during reveal
+        var showdownHands = _scenarioContext.Get<Dictionary<string, (List<(Suit, Rank)> Hole, List<(Suit, Rank)> Community)>>("showdownHands");
+        var results = new Dictionary<string, HandRanking>();
+        foreach (var (player, hands) in showdownHands)
+        {
+            results[player] = HandAggregate.EvaluateHand(hands.Hole, hands.Community);
+        }
+        _scenarioContext["evaluationResults"] = results;
     }
 
     [When(@"I rebuild the hand state")]
@@ -873,13 +908,20 @@ public class HandSteps
     [Then(@"player ""(.*)"" has ranking ""(.*)""")]
     public void ThenPlayerHasRanking(string playerName, string ranking)
     {
-        // Placeholder for hand evaluation verification
+        var results = _scenarioContext.Get<Dictionary<string, HandRanking>>("evaluationResults");
+        results.Should().ContainKey(playerName, $"No evaluation result for {playerName}");
+        var expected = ParseHandRankType(ranking);
+        results[playerName].RankType.Should().Be(expected,
+            $"Expected {playerName} to have {ranking} but got {results[playerName].RankType}");
     }
 
     [Then(@"player ""(.*)"" wins")]
     public void ThenPlayerWins(string playerName)
     {
-        // Placeholder for winner verification
+        var results = _scenarioContext.Get<Dictionary<string, HandRanking>>("evaluationResults");
+        results.Count.Should().BeGreaterOrEqualTo(2, "Need at least 2 players for winner determination");
+        var winner = results.OrderByDescending(r => r.Value.Score).First();
+        winner.Key.Should().Be(playerName, $"Expected {playerName} to win but {winner.Key} won");
     }
 
     [Then(@"the revealed ranking is ""(.*)""")]
