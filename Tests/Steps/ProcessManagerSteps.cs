@@ -429,7 +429,7 @@ public class ProcessManagerSteps
             "FLOP" => Angzarr.Examples.BettingPhase.Flop,
             "TURN" => Angzarr.Examples.BettingPhase.Turn,
             "RIVER" => Angzarr.Examples.BettingPhase.River,
-            _ => Angzarr.Examples.(Angzarr.Examples.BettingPhase)0,
+            _ => Angzarr.Examples.BettingPhase.Preflop,
         };
 
         var evt = new CommunityCardsDealt
