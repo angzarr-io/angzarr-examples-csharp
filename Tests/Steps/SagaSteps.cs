@@ -154,11 +154,16 @@ public class SagaSteps
             });
         }
 
-        // If the source event is HandComplete, add winners
+        // Add winners to the source event (HandComplete or PotAwarded)
         if (_sourceEvent is HandComplete hc)
         {
             hc.Winners.Clear();
             hc.Winners.AddRange(_winners);
+        }
+        else if (_sourceEvent is PotAwarded pa)
+        {
+            pa.Winners.Clear();
+            pa.Winners.AddRange(_winners);
         }
     }
 

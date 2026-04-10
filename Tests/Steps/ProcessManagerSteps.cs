@@ -1,8 +1,10 @@
+using Angzarr;
 using Angzarr.Examples;
 using FluentAssertions;
 using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
 using TechTalk.SpecFlow;
+using Tests.Support;
 
 namespace Tests.Steps;
 
@@ -43,14 +45,16 @@ public class PlayerProcessState
 public class ProcessManagerSteps
 {
     private readonly ScenarioContext _context;
+    private readonly TestContext _testContext;
 
     private HandProcess _process = new();
     private readonly List<IMessage> _emittedCommands = new();
     private IMessage? _currentEvent;
 
-    public ProcessManagerSteps(ScenarioContext context)
+    public ProcessManagerSteps(ScenarioContext context, TestContext testContext)
     {
         _context = context;
+        _testContext = testContext;
     }
 
     private byte[] GetPlayerRoot(string name)
@@ -409,8 +413,16 @@ public class ProcessManagerSteps
         }
     }
 
-    [Given(@"a CommunityCardsDealt event for (.+)")]
-    public void GivenACommunityCardsDealtEventFor(string phase)
+    // NOTE: "a CommunityCardsDealt event for FLOP" is handled by HandSteps.
+    // The PM's "When the process manager handles the event" step creates the
+    // CommunityCardsDealt event directly when needed, using the phase from
+    // the scenario context. See the When step below for details.
+
+    /// <summary>
+    /// Sets up a CommunityCardsDealt event for PM scenarios that reference it.
+    /// Uses a distinct step pattern to avoid conflict with HandSteps.
+    /// </summary>
+    private void SetupCommunityCardsDealtEvent(string phase)
     {
         var bettingPhase = phase switch
         {
@@ -490,6 +502,18 @@ public class ProcessManagerSteps
     public void WhenTheProcessManagerHandlesTheEvent()
     {
         _emittedCommands.Clear();
+
+        // If _currentEvent wasn't set by a PM-specific Given step, check if HandSteps
+        // added an event to the TestContext's hand event book (e.g., CommunityCardsDealt)
+        if (_currentEvent == null && _testContext.HandEventBook.Pages.Count > 0)
+        {
+            var lastPage = _testContext.HandEventBook.Pages[_testContext.HandEventBook.Pages.Count - 1];
+            if (lastPage.Event.TypeUrl.EndsWith("CommunityCardsDealt"))
+            {
+                _currentEvent = lastPage.Event.Unpack<CommunityCardsDealt>();
+            }
+        }
+
         _currentEvent.Should().NotBeNull("An event must be set before the PM handles it");
 
         if (_currentEvent is CardsDealt)

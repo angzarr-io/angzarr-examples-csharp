@@ -149,7 +149,15 @@ public class ProjectorSteps
                 break;
 
             case TableCreated tc:
-                AddOutput($"Table created: {tc.TableName} [{tc.GameVariant}] {FormatMoney(tc.SmallBlind)}/{FormatMoney(tc.BigBlind)} buy-in {FormatMoney(tc.MinBuyIn)} - {FormatMoney(tc.MaxBuyIn)}");
+                var variantName = tc.GameVariant switch
+                {
+                    GameVariant.TexasHoldem => "TEXAS_HOLDEM",
+                    GameVariant.Omaha => "OMAHA",
+                    GameVariant.FiveCardDraw => "FIVE_CARD_DRAW",
+                    GameVariant.SevenCardStud => "SEVEN_CARD_STUD",
+                    _ => tc.GameVariant.ToString(),
+                };
+                AddOutput($"Table created: {tc.TableName} [{variantName}] {FormatMoney(tc.SmallBlind)}/{FormatMoney(tc.BigBlind)} buy-in {FormatMoney(tc.MinBuyIn)} - {FormatMoney(tc.MaxBuyIn)}");
                 break;
 
             case PlayerJoined pj:
@@ -887,6 +895,13 @@ public class ProjectorSteps
     {
         _outputLines.Should().NotBeEmpty();
         _outputLines[0].Should().NotStartWith($"[{prefix}");
+    }
+
+    [Then(@"the output uses ""(.*)"" prefix")]
+    public void ThenTheOutputUsesPrefix(string expected)
+    {
+        AllOutput.Should().Contain(expected,
+            $"Expected output to contain prefix \"{expected}\" but got:\n{AllOutput}");
     }
 
     [Then(@"the output uses ""(.*)""")]
