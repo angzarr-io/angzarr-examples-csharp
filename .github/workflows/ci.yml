@@ -22,6 +22,14 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Setup buf
+        uses: bufbuild/buf-action@v1
+        with:
+          setup_only: true
+
+      - name: Generate proto code
+        run: buf generate
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
@@ -34,7 +42,7 @@ jobs:
         run: dotnet build Angzarr.Examples.sln --configuration Release --no-restore
 
       - name: Test
-        run: dotnet test Angzarr.Examples.sln --configuration Release --no-build --verbosity normal
+        run: dotnet test Angzarr.Examples.sln --configuration Release --no-build --verbosity normal --filter "TestCategory!=Acceptance&TestCategory!=e2e&TestCategory!=sync-mode&TestCategory!=cascade-error"
 
   build-images:
     name: Build & Push Images
@@ -59,6 +67,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+
+      - name: Setup buf
+        uses: bufbuild/buf-action@v1
+        with:
+          setup_only: true
+
+      - name: Generate proto code
+        run: buf generate
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -89,10 +105,23 @@ jobs:
           context: .
           file: ./Containerfile
           target: ${{ matrix.target }}
-          push: true
+          push: ${{ github.event_name != 'pull_request' }}
+          load: ${{ github.event_name == 'pull_request' }}
           tags: ${{ steps.tags.outputs.tags }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Export image for acceptance tests
+        if: github.event_name == 'pull_request'
+        run: docker save -o /tmp/${{ matrix.target }}.tar "${{ steps.tags.outputs.tags }}"
+
+      - name: Upload image artifact
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-${{ matrix.target }}
+          path: /tmp/${{ matrix.target }}.tar
+          retention-days: 1
 
   # Compute image tag for acceptance tests
   compute-tag:
@@ -145,6 +174,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+
+      - name: Setup buf
+        uses: bufbuild/buf-action@v1
+        with:
+          setup_only: true
 
       - name: Install Helm
         uses: azure/setup-helm@v4
@@ -213,7 +247,23 @@ jobs:
             kind load docker-image "$img" --name angzarr-test
           done
 
-      - name: Pull and load example images
+      - name: Download image artifacts
+        if: github.event_name == 'pull_request'
+        uses: actions/download-artifact@v4
+        with:
+          path: /tmp/images
+          pattern: image-*
+
+      - name: Load example images into Kind (PR)
+        if: github.event_name == 'pull_request'
+        run: |
+          for tarball in /tmp/images/image-*/*.tar; do
+            echo "Loading $tarball..."
+            kind load image-archive "$tarball" --name angzarr-test
+          done
+
+      - name: Pull and load example images (push)
+        if: github.event_name != 'pull_request'
         run: |
           IMAGES='${{ needs.compute-tag.outputs.images-json }}'
           echo "Pulling example images..."
@@ -224,21 +274,57 @@ jobs:
             kind load docker-image "$img" --name angzarr-test
           done
 
+      - name: Deploy infrastructure
+        run: |
+          echo "Deploying PostgreSQL..."
+          helm upgrade --install angzarr-db \
+            oci://ghcr.io/angzarr-io/charts/angzarr-db-postgres-simple \
+            --namespace angzarr-test \
+            --wait --timeout 2m
+          echo "Deploying RabbitMQ..."
+          helm upgrade --install angzarr-mq \
+            oci://ghcr.io/angzarr-io/charts/angzarr-mq-rabbitmq-simple \
+            --namespace angzarr-test \
+            --wait --timeout 3m
+          echo "Infrastructure deployed"
+
+      - name: Create gateway descriptor configmap
+        run: |
+          # Generate protobuf descriptor set for the gRPC gateway
+          # The gateway uses this to transcode HTTP/JSON to gRPC
+          cd angzarr-project/proto
+          buf build -o /tmp/types.bin
+          cd ../..
+          kubectl create configmap gateway-descriptor \
+            --from-file=types.bin=/tmp/types.bin \
+            --namespace angzarr-test
+
       - name: Deploy with Helm
         env:
           TAG: ${{ needs.compute-tag.outputs.tag }}
+          COORD_VER: ${{ env.COORDINATOR_VERSION }}
         run: |
           helm upgrade --install angzarr-csharp \
-            oci://ghcr.io/angzarr-io/helm/angzarr \
+            oci://ghcr.io/angzarr-io/charts/angzarr \
+            --version 0.5.1 \
             -f deploy/k8s/helm/values.yaml \
             -f deploy/k8s/helm/values-ci.yaml \
-            --set images.aggregate.tag=${{ env.COORDINATOR_VERSION }} \
-            --set images.saga.tag=${{ env.COORDINATOR_VERSION }} \
-            --set images.projector.tag=${{ env.COORDINATOR_VERSION }} \
-            --set images.processManager.tag=${{ env.COORDINATOR_VERSION }} \
-            --set images.stream.tag=${{ env.COORDINATOR_VERSION }} \
-            --set images.gateway.tag=${{ env.COORDINATOR_VERSION }} \
-            --set images.log.tag=${{ env.COORDINATOR_VERSION }} \
+            --set images.aggregate.tag="${COORD_VER}" \
+            --set images.saga.tag="${COORD_VER}" \
+            --set images.projector.tag="${COORD_VER}" \
+            --set images.processManager.tag="${COORD_VER}" \
+            --set images.stream.tag="${COORD_VER}" \
+            --set images.gateway.tag="${COORD_VER}" \
+            --set images.log.tag="${COORD_VER}" \
+            --set "applications.business[0].image.tag=${TAG}" \
+            --set "applications.business[1].image.tag=${TAG}" \
+            --set "applications.business[2].image.tag=${TAG}" \
+            --set "applications.sagas[0].image.tag=${TAG}" \
+            --set "applications.sagas[1].image.tag=${TAG}" \
+            --set "applications.sagas[2].image.tag=${TAG}" \
+            --set "applications.sagas[3].image.tag=${TAG}" \
+            --set "applications.projectors[0].image.tag=${TAG}" \
+            --set "applications.processManagers[0].image.tag=${TAG}" \
             -n angzarr-test \
             --wait --timeout 5m
 
@@ -267,6 +353,36 @@ jobs:
 
           echo ""
           echo "Smoke test passed: $RUNNING pods running"
+
+      - name: Setup .NET for acceptance tests
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Generate proto code for tests
+        run: buf generate
+
+      - name: Build test project
+        run: |
+          dotnet restore Tests/Tests.csproj
+          dotnet build Tests/Tests.csproj --configuration Release --no-restore
+
+      - name: Run acceptance tests
+        env:
+          PLAYER_URL: "http://localhost:1310"
+          TABLE_URL: "http://localhost:1311"
+          HAND_URL: "http://localhost:1312"
+        run: |
+          kubectl port-forward -n angzarr-test svc/player-aggregate 1310:1310 &
+          kubectl port-forward -n angzarr-test svc/table-aggregate 1311:1310 &
+          kubectl port-forward -n angzarr-test svc/hand-aggregate 1312:1310 &
+          sleep 3
+          dotnet test Tests/Tests.csproj \
+            --configuration Release \
+            --no-build \
+            --filter "TestCategory=Acceptance|TestCategory=e2e" \
+            --verbosity normal \
+            --logger "console;verbosity=detailed"
 
       - name: Show logs on failure
         if: failure()

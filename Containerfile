@@ -1,16 +1,14 @@
 # syntax=docker/dockerfile:1.4
 # C# poker examples - optimized multi-stage build
 # Build: podman build -t poker-csharp-player --target agg-player -f Containerfile .
-# Context is the examples-csharp repo root (with angzarr-client-csharp submodule)
+# Context is the examples-csharp repo root (with buf-exported proto sources)
 #
 # Optimizations:
-# 1. Shared restore stage - NuGet restore runs once
-# 2. Named cache IDs for NuGet package cache persistence
-# 3. Slim Debian runtime - minimal attack surface
-# 4. Multi-arch support (amd64 + arm64)
+# 1. Shared restore stage - NuGet restore runs once, packages in image layer
+# 2. Slim Debian runtime - minimal attack surface
+# 3. Multi-arch support (amd64 + arm64)
 #
-# Note: Using Debian-based images (not Alpine) because Grpc.Tools NuGet package
-# bundles glibc-linked protoc binaries that don't run on musl-based Alpine.
+# Note: Using Debian-based images (not Alpine) for glibc compatibility.
 
 ARG DOTNET_VERSION=8.0
 
@@ -31,8 +29,14 @@ FROM base AS restore
 
 WORKDIR /app
 
-# Copy client library submodule (including nested angzarr proto submodule)
+# Copy client library submodule (needed for Angzarr.Client ProjectReference)
 COPY angzarr-client-csharp ./angzarr-client-csharp
+
+# Copy pre-generated proto code (buf generate runs before docker build)
+COPY Angzarr.Proto/Generated ./Angzarr.Proto/Generated
+
+# Copy MSBuild customization (redirects client's Angzarr.Proto to main)
+COPY Directory.Build.targets ./
 
 # Copy solution and project files for dependency resolution
 COPY Angzarr.Examples.sln ./
@@ -54,9 +58,9 @@ COPY Table/SagaHandOO/Table.SagaHandOO.csproj ./Table/SagaHandOO/
 COPY PrjOutputOO/PrjOutputOO.csproj ./PrjOutputOO/
 COPY Player/SagaTable/Player.SagaTable.csproj ./Player/SagaTable/
 
-# Restore with persistent cache
-RUN --mount=type=cache,id=nuget-cache,target=/root/.nuget/packages,sharing=locked \
-    dotnet restore
+# Restore all packages into the image layer (not just cache mount)
+# so they survive GHA layer caching and --no-restore works in build stages
+RUN dotnet restore
 
 # ============================================================================
 # Source - copy all C# source
@@ -66,62 +70,58 @@ FROM restore AS source
 # Copy all source files
 COPY . ./
 
+# Unify Angzarr.Proto: replace client submodule's Grpc.Tools-based proto project
+# with the main pre-generated one to avoid duplicate assembly conflicts
+RUN cp Angzarr.Proto/Angzarr.Proto.csproj angzarr-client-csharp/Angzarr.Proto/Angzarr.Proto.csproj && \
+    cp -r Angzarr.Proto/Generated angzarr-client-csharp/Angzarr.Proto/
+
 # ============================================================================
 # Aggregate builds
 # ============================================================================
 FROM source AS build-player
 WORKDIR /app
-RUN --mount=type=cache,id=nuget-cache,target=/root/.nuget/packages,sharing=locked \
-    dotnet publish Player/Agg/Player.Agg.csproj -c Release -o /out --no-restore
+RUN dotnet publish Player/Agg/Player.Agg.csproj -c Release -o /out --no-restore
 
 FROM source AS build-table
 WORKDIR /app
-RUN --mount=type=cache,id=nuget-cache,target=/root/.nuget/packages,sharing=locked \
-    dotnet publish Table/Agg/Table.Agg.csproj -c Release -o /out --no-restore
+RUN dotnet publish Table/Agg/Table.Agg.csproj -c Release -o /out --no-restore
 
 FROM source AS build-hand
 WORKDIR /app
-RUN --mount=type=cache,id=nuget-cache,target=/root/.nuget/packages,sharing=locked \
-    dotnet publish Hand/Agg/Hand.Agg.csproj -c Release -o /out --no-restore
+RUN dotnet publish Hand/Agg/Hand.Agg.csproj -c Release -o /out --no-restore
 
 # ============================================================================
 # Saga builds
 # ============================================================================
 FROM source AS build-saga-table-hand
 WORKDIR /app
-RUN --mount=type=cache,id=nuget-cache,target=/root/.nuget/packages,sharing=locked \
-    dotnet publish Table/SagaHand/Table.SagaHand.csproj -c Release -o /out --no-restore
+RUN dotnet publish Table/SagaHand/Table.SagaHand.csproj -c Release -o /out --no-restore
 
 FROM source AS build-saga-table-player
 WORKDIR /app
-RUN --mount=type=cache,id=nuget-cache,target=/root/.nuget/packages,sharing=locked \
-    dotnet publish Table/SagaPlayer/Table.SagaPlayer.csproj -c Release -o /out --no-restore
+RUN dotnet publish Table/SagaPlayer/Table.SagaPlayer.csproj -c Release -o /out --no-restore
 
 FROM source AS build-saga-hand-table
 WORKDIR /app
-RUN --mount=type=cache,id=nuget-cache,target=/root/.nuget/packages,sharing=locked \
-    dotnet publish Hand/SagaTable/Hand.SagaTable.csproj -c Release -o /out --no-restore
+RUN dotnet publish Hand/SagaTable/Hand.SagaTable.csproj -c Release -o /out --no-restore
 
 FROM source AS build-saga-hand-player
 WORKDIR /app
-RUN --mount=type=cache,id=nuget-cache,target=/root/.nuget/packages,sharing=locked \
-    dotnet publish Hand/SagaPlayer/Hand.SagaPlayer.csproj -c Release -o /out --no-restore
+RUN dotnet publish Hand/SagaPlayer/Hand.SagaPlayer.csproj -c Release -o /out --no-restore
 
 # ============================================================================
 # Process Manager build
 # ============================================================================
 FROM source AS build-pmg-hand-flow
 WORKDIR /app
-RUN --mount=type=cache,id=nuget-cache,target=/root/.nuget/packages,sharing=locked \
-    dotnet publish HandFlow/HandFlow.csproj -c Release -o /out --no-restore
+RUN dotnet publish HandFlow/HandFlow.csproj -c Release -o /out --no-restore
 
 # ============================================================================
 # Projector build
 # ============================================================================
 FROM source AS build-prj-output
 WORKDIR /app
-RUN --mount=type=cache,id=nuget-cache,target=/root/.nuget/packages,sharing=locked \
-    dotnet publish PrjOutput/PrjOutput.csproj -c Release -o /out --no-restore
+RUN dotnet publish PrjOutput/PrjOutput.csproj -c Release -o /out --no-restore
 
 # ============================================================================
 # Runtime base - ASP.NET Core runtime (required for gRPC)

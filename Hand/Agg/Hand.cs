@@ -329,7 +329,7 @@ public class HandAggregate : CommandHandler<HandState>
         return evt;
     }
 
-    private static HandRanking EvaluateHand(
+    public static HandRanking EvaluateHand(
         List<(Suit Suit, Rank Rank)> holeCards,
         List<(Suit Suit, Rank Rank)> communityCards
     )
