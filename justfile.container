@@ -37,3 +37,7 @@ fmt:
 
 lint: build
     dotnet build {{SLN}} --configuration Release --no-restore /p:TreatWarningsAsErrors=true
+
+# Auto-format code (dotnet format)
+fmt-fix:
+    dotnet format
