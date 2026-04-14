@@ -80,3 +80,7 @@ clean:
     just _container "dotnet clean /workspace/Angzarr.Examples.sln" || true
     rm -rf "{{ROOT}}/data"
     find "{{ROOT}}" -type d \( -name 'bin' -o -name 'obj' \) -not -path "*/angzarr-client-csharp/*" -exec rm -rf {} + 2>/dev/null || true
+
+# Auto-format code
+fmt-fix:
+    just _container fmt-fix
