@@ -47,7 +47,7 @@ jobs:
       - name: Mutation Testing (Stryker.NET)
         run: |
           dotnet tool restore
-          dotnet stryker -p Tournament/Agg/Tournament.Agg.csproj -tp Tournament/Agg.Tests/Tournament.Agg.Tests.csproj
+          cd Tournament/Agg.Tests && dotnet stryker -p Tournament.Agg.csproj
 
       - name: Upload mutation report
         uses: actions/upload-artifact@v4
