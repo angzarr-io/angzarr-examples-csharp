@@ -1,8 +1,7 @@
-Microsoft Visual Studio Solution File, Format Version 12.00
+﻿Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Angzarr.Proto", "Angzarr.Proto\Angzarr.Proto.csproj", "{B2C3D4E5-F6A7-8901-BCDE-F12345678901}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Player.Agg", "Player\Agg\Player.Agg.csproj", "{C3D4E5F6-A7B8-9012-CDEF-123456789012}"
@@ -37,7 +36,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PrjOutputOO", "PrjOutputOO\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Player.SagaTable", "Player\SagaTable\Player.SagaTable.csproj", "{5F6A7B8C-9DAE-BCDF-0123-6789012B0123}"
 EndProject
-
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tournament", "Tournament", "{E1C0DF02-A155-4CCB-BAAD-3BF25A66A34B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tournament.Agg", "Tournament\Agg\Tournament.Agg.csproj", "{67655CAC-34C2-40FB-AF00-8938F59A9504}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tournament.Agg.Tests", "Tournament\Agg.Tests\Tournament.Agg.Tests.csproj", "{36581FC3-E45A-4CE5-8C12-63612BF53605}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -112,5 +116,17 @@ Global
 		{5F6A7B8C-9DAE-BCDF-0123-6789012B0123}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5F6A7B8C-9DAE-BCDF-0123-6789012B0123}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5F6A7B8C-9DAE-BCDF-0123-6789012B0123}.Release|Any CPU.Build.0 = Release|Any CPU
+		{67655CAC-34C2-40FB-AF00-8938F59A9504}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{67655CAC-34C2-40FB-AF00-8938F59A9504}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{67655CAC-34C2-40FB-AF00-8938F59A9504}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{67655CAC-34C2-40FB-AF00-8938F59A9504}.Release|Any CPU.Build.0 = Release|Any CPU
+		{36581FC3-E45A-4CE5-8C12-63612BF53605}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{36581FC3-E45A-4CE5-8C12-63612BF53605}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{36581FC3-E45A-4CE5-8C12-63612BF53605}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{36581FC3-E45A-4CE5-8C12-63612BF53605}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{67655CAC-34C2-40FB-AF00-8938F59A9504} = {E1C0DF02-A155-4CCB-BAAD-3BF25A66A34B}
+		{36581FC3-E45A-4CE5-8C12-63612BF53605} = {E1C0DF02-A155-4CCB-BAAD-3BF25A66A34B}
 	EndGlobalSection
 EndGlobal

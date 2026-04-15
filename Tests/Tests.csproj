@@ -13,6 +13,7 @@
         <ProjectReference Include="../Player/Agg/Player.Agg.csproj" />
         <ProjectReference Include="../Table/Agg/Table.Agg.csproj" />
         <ProjectReference Include="../Hand/Agg/Hand.Agg.csproj" />
+        <ProjectReference Include="../Tournament/Agg/Tournament.Agg.csproj" />
     </ItemGroup>
 
     <ItemGroup>
