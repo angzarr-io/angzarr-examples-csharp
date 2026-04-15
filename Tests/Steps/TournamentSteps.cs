@@ -4,8 +4,8 @@ using FluentAssertions;
 using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
 using TechTalk.SpecFlow;
-using Tournament.Agg;
 using Tournament.Agg.Handlers;
+using TournamentState = Tournament.Agg.TournamentState;
 
 namespace Tests.Steps;
 
