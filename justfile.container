@@ -35,6 +35,11 @@ test: build
 fmt:
     dotnet format {{SLN}}
 
+# Run Stryker.NET mutation testing on tournament handlers
+mutation-test: build
+    dotnet tool restore
+    dotnet stryker --config-file stryker-config.json
+
 lint: build
     dotnet build {{SLN}} --configuration Release --no-restore /p:TreatWarningsAsErrors=true
 

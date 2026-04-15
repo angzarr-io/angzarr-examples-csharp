@@ -1,0 +1,13 @@
+{
+  "stryker-config": {
+    "project": "Tournament/Agg/Tournament.Agg.csproj",
+    "test-projects": ["Tournament/Agg.Tests/Tournament.Agg.Tests.csproj"],
+    "reporters": ["html", "progress"],
+    "mutation-level": "Standard",
+    "thresholds": {
+      "high": 90,
+      "low": 70,
+      "break": 60
+    }
+  }
+}
