@@ -1,6 +1,5 @@
 // DOC: This file is referenced in docs/docs/examples/sagas.mdx
 //      Update documentation when making changes to saga patterns.
-
 using Angzarr;
 using Angzarr.Client;
 using Angzarr.Examples;
@@ -9,28 +8,34 @@ using Google.Protobuf.WellKnownTypes;
 
 namespace Table.SagaHand;
 
+// docs:start:saga_oo
 /// <summary>
-/// Saga: Table -> Hand
+/// Saga: Table -> Hand (OO Pattern)
+///
 /// Reacts to HandStarted events from Table domain.
 /// Sends DealCards commands to Hand domain.
 /// Sagas are stateless translators - framework handles sequence stamping.
+///
+/// Uses annotation-based handler registration with:
+/// - [Handles(typeof(EventType))] for handle phase handlers
 /// </summary>
-public static class TableHandSaga
+public class TableHandSaga : Saga
 {
-    // docs:start:event_router
-    public static EventRouter Create()
-    {
-        return new EventRouter("saga-table-hand")
-            .Domain("table")
-            .On<HandStarted>(HandleHandStarted);
-    }
+    public override string Name => "saga-table-hand";
+    public override string InputDomain => "table";
+    public override string OutputDomain => "hand";
 
-    // docs:end:event_router
-
-    // docs:start:saga_handler
-    private static object HandleHandStarted(HandStarted evt, List<EventBook> destinations)
+    /// <summary>
+    /// Handle phase: translate Table.HandStarted -> Hand.DealCards.
+    ///
+    /// Called with the source event. Framework handles sequence stamping.
+    /// </summary>
+    [Handles(typeof(HandStarted))]
+    public CommandBook HandleHandStarted(HandStarted evt, List<EventBook> destinations)
     {
         // Sagas are stateless - destinations not used, framework stamps sequences
+
+        // Convert SeatSnapshot to PlayerInHand
         var players = evt
             .ActivePlayers.Select(seat => new PlayerInHand
             {
@@ -40,6 +45,7 @@ public static class TableHandSaga
             })
             .ToList();
 
+        // Build DealCards command
         var dealCards = new DealCards
         {
             TableRoot = evt.HandRoot,
@@ -50,8 +56,6 @@ public static class TableHandSaga
             BigBlind = evt.BigBlind,
         };
         dealCards.Players.AddRange(players);
-
-        var cmdAny = EventRouter.PackCommand(dealCards);
 
         return new CommandBook
         {
@@ -65,10 +69,10 @@ public static class TableHandSaga
                 new CommandPage
                 {
                     Header = new PageHeader { AngzarrDeferred = new AngzarrDeferredSequence() },
-                    Command = cmdAny,
+                    Command = PackCommand(dealCards),
                 },
             },
         };
     }
-    // docs:end:saga_handler
 }
+// docs:end:saga_oo

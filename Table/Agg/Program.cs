@@ -15,8 +15,6 @@ public class Program
 
         var builder = WebApplication.CreateBuilder(args);
         builder.Services.AddGrpc();
-        builder.Services.AddSingleton(_ => TableRouter.Create());
-        builder.Services.AddSingleton<TableAggregate>();
 
         builder.WebHost.ConfigureKestrel(options =>
         {

@@ -7,7 +7,7 @@ namespace Tournament.Agg.Handlers;
 
 public static class RegistrationHandler
 {
-    public static RegistrationOpened HandleOpen(OpenRegistration cmd, TournamentState state)
+    public static RegistrationOpened HandleOpenRegistration(OpenRegistration cmd, TournamentState state)
     {
         if (!state.Exists) throw new CommandRejectedError("Tournament does not exist");
         if (state.IsRegistrationOpen) throw new CommandRejectedError("Registration already open");
@@ -16,7 +16,7 @@ public static class RegistrationHandler
         return new RegistrationOpened { OpenedAt = Timestamp.FromDateTime(DateTime.UtcNow) };
     }
 
-    public static RegistrationClosed HandleClose(CloseRegistration cmd, TournamentState state)
+    public static RegistrationClosed HandleCloseRegistration(CloseRegistration cmd, TournamentState state)
     {
         if (!state.IsRegistrationOpen) throw new CommandRejectedError("Registration not open");
 
@@ -27,7 +27,7 @@ public static class RegistrationHandler
         };
     }
 
-    public static IMessage HandleEnroll(EnrollPlayer cmd, TournamentState state)
+    public static IMessage HandleEnrollPlayer(EnrollPlayer cmd, TournamentState state)
     {
         var rootHex = Convert.ToHexString(cmd.PlayerRoot.ToByteArray()).ToLowerInvariant();
 

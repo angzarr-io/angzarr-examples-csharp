@@ -37,7 +37,7 @@ public class LifecycleHandlerTests
     {
         var state = new TournamentState();
         state.ApplyCreated(new TournamentCreated { Name = "T", BuyIn = 1000, StartingStack = 10000, MaxPlayers = 100 });
-        var act = () => LifecycleHandler.HandleAdvanceBlind(new AdvanceBlindLevel(), state);
+        var act = () => LifecycleHandler.HandleAdvanceBlindLevel(new AdvanceBlindLevel(), state);
         act.Should().Throw<CommandRejectedError>().WithMessage("*not running*");
     }
 
@@ -47,7 +47,7 @@ public class LifecycleHandlerTests
         var state = RunningState();
         state.ApplyBlindAdvanced(new BlindLevelAdvanced { Level = 1 });
 
-        var result = LifecycleHandler.HandleAdvanceBlind(new AdvanceBlindLevel(), state);
+        var result = LifecycleHandler.HandleAdvanceBlindLevel(new AdvanceBlindLevel(), state);
 
         result.Level.Should().Be(2);
         result.SmallBlind.Should().Be(50);
@@ -60,7 +60,7 @@ public class LifecycleHandlerTests
         var state = RunningState();
         state.ApplyBlindAdvanced(new BlindLevelAdvanced { Level = 3 }); // At max
 
-        var result = LifecycleHandler.HandleAdvanceBlind(new AdvanceBlindLevel(), state);
+        var result = LifecycleHandler.HandleAdvanceBlindLevel(new AdvanceBlindLevel(), state);
 
         result.Level.Should().Be(4);
         result.SmallBlind.Should().Be(100); // Uses last level values
@@ -72,7 +72,7 @@ public class LifecycleHandlerTests
     {
         var state = new TournamentState();
         state.ApplyCreated(new TournamentCreated { Name = "T", BuyIn = 1000, StartingStack = 10000, MaxPlayers = 100 });
-        var act = () => LifecycleHandler.HandleEliminate(
+        var act = () => LifecycleHandler.HandleEliminatePlayer(
             new EliminatePlayer { PlayerRoot = ByteString.CopyFrom(new byte[] { 1 }) }, state);
         act.Should().Throw<CommandRejectedError>().WithMessage("*not running*");
     }
@@ -81,7 +81,7 @@ public class LifecycleHandlerTests
     public void Eliminate_RejectsUnregistered()
     {
         var state = RunningState();
-        var act = () => LifecycleHandler.HandleEliminate(
+        var act = () => LifecycleHandler.HandleEliminatePlayer(
             new EliminatePlayer { PlayerRoot = ByteString.CopyFrom(new byte[] { 9, 9, 9 }) }, state);
         act.Should().Throw<CommandRejectedError>().WithMessage("*not registered*");
     }
@@ -90,7 +90,7 @@ public class LifecycleHandlerTests
     public void Eliminate_SetsFinishPosition()
     {
         var state = RunningState();
-        var result = LifecycleHandler.HandleEliminate(
+        var result = LifecycleHandler.HandleEliminatePlayer(
             new EliminatePlayer { PlayerRoot = ByteString.CopyFrom(new byte[] { 1, 2, 3 }) }, state);
 
         result.FinishPosition.Should().Be(2); // 2 players remaining
@@ -101,7 +101,7 @@ public class LifecycleHandlerTests
     {
         var state = new TournamentState();
         state.ApplyCreated(new TournamentCreated { Name = "T", BuyIn = 1000, StartingStack = 10000, MaxPlayers = 100 });
-        var act = () => LifecycleHandler.HandlePause(new PauseTournament { Reason = "break" }, state);
+        var act = () => LifecycleHandler.HandlePauseTournament(new PauseTournament { Reason = "break" }, state);
         act.Should().Throw<CommandRejectedError>().WithMessage("*not running*");
     }
 
@@ -109,7 +109,7 @@ public class LifecycleHandlerTests
     public void Pause_SetsReason()
     {
         var state = RunningState();
-        var result = LifecycleHandler.HandlePause(new PauseTournament { Reason = "Dinner break" }, state);
+        var result = LifecycleHandler.HandlePauseTournament(new PauseTournament { Reason = "Dinner break" }, state);
         result.Reason.Should().Be("Dinner break");
     }
 
@@ -117,7 +117,7 @@ public class LifecycleHandlerTests
     public void Resume_RejectsNotPaused()
     {
         var state = RunningState();
-        var act = () => LifecycleHandler.HandleResume(new ResumeTournament(), state);
+        var act = () => LifecycleHandler.HandleResumeTournament(new ResumeTournament(), state);
         act.Should().Throw<CommandRejectedError>().WithMessage("*not paused*");
     }
 
@@ -127,7 +127,7 @@ public class LifecycleHandlerTests
         var state = RunningState();
         state.ApplyPaused(new TournamentPaused { Reason = "break" });
 
-        var result = LifecycleHandler.HandleResume(new ResumeTournament(), state);
+        var result = LifecycleHandler.HandleResumeTournament(new ResumeTournament(), state);
         result.ResumedAt.Should().NotBeNull();
     }
 }

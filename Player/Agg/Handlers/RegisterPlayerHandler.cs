@@ -16,7 +16,7 @@ namespace Player.Agg.Handlers;
 /// enabling direct unit testing without mocking infrastructure. You can test
 /// each step independently by passing state objects and asserting on results.
 /// </summary>
-public static class RegisterHandler
+public static class RegisterPlayerHandler
 {
     public static PlayerRegistered Handle(RegisterPlayer cmd, PlayerState state)
     {

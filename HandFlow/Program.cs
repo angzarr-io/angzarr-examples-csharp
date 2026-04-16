@@ -5,17 +5,16 @@ using Microsoft.Extensions.DependencyInjection;
 namespace HandFlow;
 
 /// <summary>
-/// Hand Flow process manager gRPC server entry point.
+/// Hand Flow process manager gRPC server entry point (OO pattern).
 /// </summary>
 public class Program
 {
     public static void Main(string[] args)
     {
-        var port = Environment.GetEnvironmentVariable("PORT") ?? "50691";
+        var port = Environment.GetEnvironmentVariable("PORT") ?? "50892";
 
         var builder = WebApplication.CreateBuilder(args);
         builder.Services.AddGrpc();
-        builder.Services.AddSingleton<HandFlowProcessManager>();
 
         builder.WebHost.ConfigureKestrel(options =>
         {
@@ -28,7 +27,7 @@ public class Program
         var app = builder.Build();
         app.MapGrpcService<HandFlowService>();
 
-        Console.WriteLine($"Hand Flow process manager listening on port {port}");
+        Console.WriteLine($"Hand Flow process manager (OO pattern) listening on port {port}");
         app.Run();
     }
 }

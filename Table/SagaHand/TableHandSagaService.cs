@@ -7,18 +7,14 @@ using Grpc.Core;
 
 namespace Table.SagaHand;
 
+// docs:start:saga_oo_service
 /// <summary>
-/// gRPC service for Table->Hand saga.
+/// gRPC service for Table->Hand saga using OO pattern.
 /// Sagas are stateless translators - framework handles sequence stamping.
 /// </summary>
 public class TableHandSagaService : SagaService.SagaServiceBase
 {
-    private readonly EventRouter _router;
-
-    public TableHandSagaService(EventRouter router)
-    {
-        _router = router;
-    }
+    private readonly TableHandSaga _saga = new();
 
     public override Task<SagaResponse> Handle(SagaHandleRequest request, ServerCallContext context)
     {
@@ -26,35 +22,15 @@ public class TableHandSagaService : SagaService.SagaServiceBase
 
         foreach (var page in request.Source.Pages)
         {
-            var eventMessage = UnpackEvent(page.Event);
-            if (eventMessage == null)
+            if (page.Event == null)
                 continue;
 
             // Sagas receive source events only - framework handles destinations
-            var result = _router.DoHandle(eventMessage, new List<EventBook>());
-
-            if (result is CommandBook commandBook)
-            {
-                response.Commands.Add(commandBook);
-            }
-            else if (result is List<CommandBook> commandBooks)
-            {
-                response.Commands.AddRange(commandBooks);
-            }
+            var commands = _saga.Dispatch(page.Event, destinations: new List<EventBook>());
+            response.Commands.AddRange(commands);
         }
 
         return Task.FromResult(response);
     }
-
-    private static IMessage? UnpackEvent(Any eventAny)
-    {
-        var typeUrl = eventAny.TypeUrl;
-        var typeName = typeUrl.Contains('/') ? typeUrl.Split('/').Last() : typeUrl;
-
-        return typeName switch
-        {
-            "examples.HandStarted" => eventAny.Unpack<HandStarted>(),
-            _ => null,
-        };
-    }
 }
+// docs:end:saga_oo_service

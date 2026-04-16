@@ -7,7 +7,7 @@ using Google.Protobuf.WellKnownTypes;
 namespace Player.SagaTable;
 
 /// <summary>
-/// Saga: Player -> Table
+/// Saga: Player -> Table (OO Pattern)
 ///
 /// Propagates player sit-out/sit-in intent as facts to the table domain.
 /// Sagas are stateless translators - framework handles sequence stamping.
@@ -16,25 +16,21 @@ namespace Player.SagaTable;
 /// - PlayerSittingOut -> PlayerSatOut fact to table
 /// - PlayerReturningToPlay -> PlayerSatIn fact to table
 /// </summary>
-public static class PlayerTableSaga
+public class PlayerTableSaga : Saga
 {
+    public override string Name => "saga-player-table";
+    public override string InputDomain => "player";
+    public override string OutputDomain => "table";
+
     /// <summary>
     /// Stored source root during dispatch for handler access.
     /// </summary>
-    private static ByteString _currentSourceRoot = ByteString.Empty;
-
-    public static EventRouter Create()
-    {
-        return new EventRouter("saga-player-table")
-            .Domain("player")
-            .On<PlayerSittingOut>(HandleSittingOut)
-            .On<PlayerReturningToPlay>(HandleReturningToPlay);
-    }
+    private ByteString _currentSourceRoot = ByteString.Empty;
 
     /// <summary>
     /// Set source root from the event book before processing.
     /// </summary>
-    public static void SetSourceRoot(EventBook? source)
+    public void SetSourceRoot(EventBook? source)
     {
         if (source?.Cover?.Root != null)
         {
@@ -46,12 +42,9 @@ public static class PlayerTableSaga
         }
     }
 
-    /// <summary>
-    /// Handle phase: translate PlayerSittingOut -> PlayerSatOut fact for table.
-    /// </summary>
-    private static object HandleSittingOut(PlayerSittingOut evt, List<EventBook> destinations)
+    [Handles(typeof(PlayerSittingOut))]
+    public EventBook HandlePlayerSittingOut(PlayerSittingOut evt, List<EventBook> destinations)
     {
-        // Sagas are stateless - destinations not used, framework stamps sequences
         var satOut = new PlayerSatOut { PlayerRoot = _currentSourceRoot, SatOutAt = evt.SatOutAt };
 
         var factAny = Any.Pack(satOut, "type.googleapis.com/");
@@ -74,15 +67,12 @@ public static class PlayerTableSaga
         };
     }
 
-    /// <summary>
-    /// Handle phase: translate PlayerReturningToPlay -> PlayerSatIn fact for table.
-    /// </summary>
-    private static object HandleReturningToPlay(
+    [Handles(typeof(PlayerReturningToPlay))]
+    public EventBook HandlePlayerReturningToPlay(
         PlayerReturningToPlay evt,
         List<EventBook> destinations
     )
     {
-        // Sagas are stateless - destinations not used, framework stamps sequences
         var satIn = new PlayerSatIn { PlayerRoot = _currentSourceRoot, SatInAt = evt.SatInAt };
 
         var factAny = Any.Pack(satIn, "type.googleapis.com/");

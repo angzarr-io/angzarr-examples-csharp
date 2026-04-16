@@ -8,17 +8,12 @@ using Grpc.Core;
 namespace Hand.Agg;
 
 /// <summary>
-/// gRPC service for the Hand aggregate.
+/// gRPC service for the Hand aggregate (OO pattern).
+///
+/// Uses the HandAggregate class with [Handles] attribute-based dispatch.
 /// </summary>
 public class HandAggregateService : CommandHandlerService.CommandHandlerServiceBase
 {
-    private readonly CommandRouter _router;
-
-    public HandAggregateService(CommandRouter router)
-    {
-        _router = router;
-    }
-
     public override Task<BusinessResponse> Handle(
         ContextualCommand request,
         ServerCallContext context
@@ -56,14 +51,19 @@ public class HandAggregateService : CommandHandlerService.CommandHandlerServiceB
                 );
             }
 
-            var eventMessage = _router.Handle(command, request.Events);
+            // Rehydrate aggregate from events
+            var agg = new HandAggregate();
+            if (request.Events != null)
+                agg.Rehydrate(request.Events);
+
+            var eventMessage = agg.HandleCommand(command);
 
             var eventBook = new EventBook();
             var eventAny = Any.Pack(eventMessage, "type.googleapis.com/");
             eventBook.Pages.Add(
                 new EventPage
                 {
-                    Header = new PageHeader { Sequence = request.Events.NextSequence },
+                    Header = new PageHeader { Sequence = request.Events?.NextSequence ?? 0 },
                     Event = eventAny,
                 }
             );
@@ -92,13 +92,10 @@ public class HandAggregateService : CommandHandlerService.CommandHandlerServiceB
 
     public override Task<ReplayResponse> Replay(ReplayRequest request, ServerCallContext context)
     {
-        // Build state from events
         var eventBook = new EventBook();
         eventBook.Pages.AddRange(request.Events);
         var state = HandState.FromEventBook(eventBook);
 
-        // Note: No proto state type defined, returning empty response
-        // The state is built successfully and could be serialized if needed
         var response = new ReplayResponse();
         return Task.FromResult(response);
     }

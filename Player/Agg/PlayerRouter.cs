@@ -15,12 +15,12 @@ public static class PlayerRouter
     public static CommandRouter Create()
     {
         return new CommandRouter("player", eb => PlayerState.FromEventBook(eb))
-            .On<RegisterPlayer>((cmd, state) => RegisterHandler.Handle(cmd, (PlayerState)state))
-            .On<DepositFunds>((cmd, state) => DepositHandler.Handle(cmd, (PlayerState)state))
-            .On<WithdrawFunds>((cmd, state) => WithdrawHandler.Handle(cmd, (PlayerState)state))
-            .On<ReserveFunds>((cmd, state) => ReserveHandler.Handle(cmd, (PlayerState)state))
-            .On<ReleaseFunds>((cmd, state) => ReleaseHandler.Handle(cmd, (PlayerState)state))
-            .On<TransferFunds>((cmd, state) => TransferHandler.Handle(cmd, (PlayerState)state));
+            .On<RegisterPlayer>((cmd, state) => RegisterPlayerHandler.Handle(cmd, (PlayerState)state))
+            .On<DepositFunds>((cmd, state) => DepositFundsHandler.Handle(cmd, (PlayerState)state))
+            .On<WithdrawFunds>((cmd, state) => WithdrawFundsHandler.Handle(cmd, (PlayerState)state))
+            .On<ReserveFunds>((cmd, state) => ReserveFundsHandler.Handle(cmd, (PlayerState)state))
+            .On<ReleaseFunds>((cmd, state) => ReleaseFundsHandler.Handle(cmd, (PlayerState)state))
+            .On<TransferFunds>((cmd, state) => TransferFundsHandler.Handle(cmd, (PlayerState)state));
     }
     // docs:end:command_router
 }

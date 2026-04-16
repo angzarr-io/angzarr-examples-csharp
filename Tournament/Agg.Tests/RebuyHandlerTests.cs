@@ -32,7 +32,7 @@ public class RebuyHandlerTests
     [Fact]
     public void RejectsNonExistent()
     {
-        var act = () => RebuyHandler.Handle(
+        var act = () => ProcessRebuyHandler.Handle(
             new ProcessRebuy { PlayerRoot = ByteString.CopyFrom(new byte[] { 1 }) },
             new TournamentState());
         act.Should().Throw<CommandRejectedError>().WithMessage("*does not exist*");
@@ -43,7 +43,7 @@ public class RebuyHandlerTests
     {
         var state = new TournamentState();
         state.ApplyCreated(new TournamentCreated { Name = "T", BuyIn = 1000, StartingStack = 10000, MaxPlayers = 100 });
-        var act = () => RebuyHandler.Handle(
+        var act = () => ProcessRebuyHandler.Handle(
             new ProcessRebuy { PlayerRoot = ByteString.CopyFrom(new byte[] { 1 }) }, state);
         act.Should().Throw<CommandRejectedError>().WithMessage("*not running*");
     }
@@ -52,7 +52,7 @@ public class RebuyHandlerTests
     public void RejectsUnregistered()
     {
         var state = RebuyState();
-        var act = () => RebuyHandler.Handle(
+        var act = () => ProcessRebuyHandler.Handle(
             new ProcessRebuy { PlayerRoot = ByteString.CopyFrom(new byte[] { 9, 9, 9 }) }, state);
         act.Should().Throw<CommandRejectedError>().WithMessage("*not registered*");
     }
@@ -63,7 +63,7 @@ public class RebuyHandlerTests
         var state = RebuyState();
         state.ApplyBlindAdvanced(new BlindLevelAdvanced { Level = 5 }); // Past cutoff of 4
 
-        var result = RebuyHandler.Handle(
+        var result = ProcessRebuyHandler.Handle(
             new ProcessRebuy { PlayerRoot = ByteString.CopyFrom(new byte[] { 1, 2, 3 }) }, state);
 
         result.Should().BeOfType<RebuyDenied>();
@@ -78,7 +78,7 @@ public class RebuyHandlerTests
             state.ApplyRebuyProcessed(new RebuyProcessed
                 { PlayerRoot = ByteString.CopyFrom(new byte[] { 1, 2, 3 }), RebuyCount = i + 1 });
 
-        var result = RebuyHandler.Handle(
+        var result = ProcessRebuyHandler.Handle(
             new ProcessRebuy { PlayerRoot = ByteString.CopyFrom(new byte[] { 1, 2, 3 }) }, state);
 
         result.Should().BeOfType<RebuyDenied>();
@@ -99,7 +99,7 @@ public class RebuyHandlerTests
             { PlayerRoot = ByteString.CopyFrom(new byte[] { 1, 2, 3 }), FeePaid = 1000 });
         state.ApplyTournamentStarted(new TournamentStarted());
 
-        var result = RebuyHandler.Handle(
+        var result = ProcessRebuyHandler.Handle(
             new ProcessRebuy { PlayerRoot = ByteString.CopyFrom(new byte[] { 1, 2, 3 }) }, state);
 
         result.Should().BeOfType<RebuyDenied>();
@@ -110,7 +110,7 @@ public class RebuyHandlerTests
     public void ProcessesSuccessfully()
     {
         var state = RebuyState();
-        var result = RebuyHandler.Handle(
+        var result = ProcessRebuyHandler.Handle(
             new ProcessRebuy { PlayerRoot = ByteString.CopyFrom(new byte[] { 1, 2, 3 }) }, state);
 
         result.Should().BeOfType<RebuyProcessed>();
@@ -127,7 +127,7 @@ public class RebuyHandlerTests
         state.ApplyRebuyProcessed(new RebuyProcessed
             { PlayerRoot = ByteString.CopyFrom(new byte[] { 1, 2, 3 }), RebuyCount = 2 });
 
-        var result = RebuyHandler.Handle(
+        var result = ProcessRebuyHandler.Handle(
             new ProcessRebuy { PlayerRoot = ByteString.CopyFrom(new byte[] { 1, 2, 3 }) }, state);
 
         result.Should().BeOfType<RebuyProcessed>();

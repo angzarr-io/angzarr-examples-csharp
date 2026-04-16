@@ -5,7 +5,9 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Table.SagaHand;
 
 /// <summary>
-/// Table->Hand saga gRPC server entry point.
+/// Table -> Hand saga gRPC server entry point (OO pattern).
+///
+/// Uses the Saga base class with annotation-based handler registration.
 /// </summary>
 public class Program
 {
@@ -15,7 +17,7 @@ public class Program
 
         var builder = WebApplication.CreateBuilder(args);
         builder.Services.AddGrpc();
-        builder.Services.AddSingleton(_ => TableHandSaga.Create());
+        builder.Services.AddSingleton<TableHandSagaService>();
 
         builder.WebHost.ConfigureKestrel(options =>
         {

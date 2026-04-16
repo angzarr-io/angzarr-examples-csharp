@@ -239,45 +239,45 @@ public class TournamentSteps
 
     [When(@"I handle a CreateTournament command with name ""(.*)"" buy-in (\d+) and starting-stack (\d+)")]
     public void HandleCreate(string name, int buyIn, int stack) =>
-        HandleCommand(() => CreateHandler.Handle(new CreateTournament
+        HandleCommand(() => CreateTournamentHandler.Handle(new CreateTournament
         { Name = name, GameVariant = GameVariant.TexasHoldem, BuyIn = buyIn, StartingStack = stack, MaxPlayers = 100, MinPlayers = 2 }, State));
 
     [When(@"I handle a CreateTournament command with name ""(.*)"" buy-in (\d+) starting-stack (\d+) and max-players (\d+)")]
     public void HandleCreateMax(string name, int buyIn, int stack, int max) =>
-        HandleCommand(() => CreateHandler.Handle(new CreateTournament
+        HandleCommand(() => CreateTournamentHandler.Handle(new CreateTournament
         { Name = name, GameVariant = GameVariant.TexasHoldem, BuyIn = buyIn, StartingStack = stack, MaxPlayers = max, MinPlayers = 2 }, State));
 
     [When("I handle an OpenRegistration command")]
     public void HandleOpen() =>
-        HandleCommand(() => RegistrationHandler.HandleOpen(new OpenRegistration(), State));
+        HandleCommand(() => RegistrationHandler.HandleOpenRegistration(new OpenRegistration(), State));
 
     [When("I handle a CloseRegistration command")]
     public void HandleClose() =>
-        HandleCommand(() => RegistrationHandler.HandleClose(new CloseRegistration(), State));
+        HandleCommand(() => RegistrationHandler.HandleCloseRegistration(new CloseRegistration(), State));
 
     [When(@"I handle an EnrollPlayer command for player ""(.*)""")]
     public void HandleEnroll(string name) =>
-        HandleCommand(() => RegistrationHandler.HandleEnroll(new EnrollPlayer { PlayerRoot = PlayerRoot(name) }, State));
+        HandleCommand(() => RegistrationHandler.HandleEnrollPlayer(new EnrollPlayer { PlayerRoot = PlayerRoot(name) }, State));
 
     [When(@"I handle a ProcessRebuy command for player ""(.*)""")]
     public void HandleRebuy(string name) =>
-        HandleCommand(() => RebuyHandler.Handle(new ProcessRebuy { PlayerRoot = PlayerRoot(name) }, State));
+        HandleCommand(() => ProcessRebuyHandler.Handle(new ProcessRebuy { PlayerRoot = PlayerRoot(name) }, State));
 
     [When("I handle an AdvanceBlindLevel command")]
     public void HandleAdvance() =>
-        HandleCommand(() => LifecycleHandler.HandleAdvanceBlind(new AdvanceBlindLevel(), State));
+        HandleCommand(() => LifecycleHandler.HandleAdvanceBlindLevel(new AdvanceBlindLevel(), State));
 
     [When(@"I handle an EliminatePlayer command for player ""(.*)""")]
     public void HandleEliminate(string name) =>
-        HandleCommand(() => LifecycleHandler.HandleEliminate(new EliminatePlayer { PlayerRoot = PlayerRoot(name) }, State));
+        HandleCommand(() => LifecycleHandler.HandleEliminatePlayer(new EliminatePlayer { PlayerRoot = PlayerRoot(name) }, State));
 
     [When(@"I handle a PauseTournament command with reason ""(.*)""")]
     public void HandlePause(string reason) =>
-        HandleCommand(() => LifecycleHandler.HandlePause(new PauseTournament { Reason = reason }, State));
+        HandleCommand(() => LifecycleHandler.HandlePauseTournament(new PauseTournament { Reason = reason }, State));
 
     [When("I handle a ResumeTournament command")]
     public void HandleResume() =>
-        HandleCommand(() => LifecycleHandler.HandleResume(new ResumeTournament(), State));
+        HandleCommand(() => LifecycleHandler.HandleResumeTournament(new ResumeTournament(), State));
 
     [When("I rebuild the tournament state")]
     public void RebuildState() { /* State tracked via ApplyEvent */ }

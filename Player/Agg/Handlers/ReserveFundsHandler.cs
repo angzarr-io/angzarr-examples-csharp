@@ -11,7 +11,7 @@ namespace Player.Agg.Handlers;
 /// <summary>
 /// Handler for ReserveFunds command.
 /// </summary>
-public static class ReserveHandler
+public static class ReserveFundsHandler
 {
     public static FundsReserved Handle(ReserveFunds cmd, PlayerState state)
     {

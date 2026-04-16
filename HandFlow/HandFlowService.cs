@@ -1,29 +1,23 @@
 using Angzarr;
-using Angzarr.Examples;
-using Google.Protobuf;
-using Google.Protobuf.WellKnownTypes;
+using Angzarr.Client;
 using Grpc.Core;
 
 namespace HandFlow;
 
 /// <summary>
-/// gRPC service for Hand Flow process manager.
+/// gRPC service for Hand Flow process manager (OO pattern).
 /// </summary>
 public class HandFlowService : ProcessManagerService.ProcessManagerServiceBase
 {
-    private readonly HandFlowProcessManager _pm;
-
-    public HandFlowService(HandFlowProcessManager pm)
-    {
-        _pm = pm;
-    }
-
     public override Task<ProcessManagerPrepareResponse> Prepare(
         ProcessManagerPrepareRequest request,
         ServerCallContext context
     )
     {
-        var covers = _pm.Prepare(request.Trigger, request.ProcessState);
+        var covers = ProcessManager<PMState>.PrepareDestinations<HandFlowPM>(
+            request.Trigger,
+            request.ProcessState
+        );
 
         var response = new ProcessManagerPrepareResponse();
         response.Destinations.AddRange(covers);
@@ -37,7 +31,7 @@ public class HandFlowService : ProcessManagerService.ProcessManagerServiceBase
     {
         // destination_sequences replaced repeated EventBook destinations in the proto.
         // This PM doesn't use destination state, so pass an empty list.
-        var (commands, events) = _pm.Handle(
+        var (commands, events) = ProcessManager<PMState>.Handle<HandFlowPM>(
             request.Trigger,
             request.ProcessState,
             new List<EventBook>()

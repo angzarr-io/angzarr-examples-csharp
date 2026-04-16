@@ -7,21 +7,21 @@ using Google.Protobuf.WellKnownTypes;
 namespace Table.SagaPlayer;
 
 /// <summary>
-/// Saga: Table -> Player
+/// Saga: Table -> Player (OO Pattern)
+///
 /// Reacts to HandEnded events from Table domain.
 /// Sends ReleaseFunds commands to Player domain.
 /// Sagas are stateless translators - framework handles sequence stamping.
 /// </summary>
-public static class TablePlayerSaga
+public class TablePlayerSaga : Saga
 {
-    public static EventRouter Create()
-    {
-        return new EventRouter("saga-table-player").Domain("table").On<HandEnded>(HandleHandEnded);
-    }
+    public override string Name => "saga-table-player";
+    public override string InputDomain => "table";
+    public override string OutputDomain => "player";
 
-    private static object HandleHandEnded(HandEnded evt, List<EventBook> destinations)
+    [Handles(typeof(HandEnded))]
+    public List<CommandBook> HandleHandEnded(HandEnded evt, List<EventBook> destinations)
     {
-        // Sagas are stateless - destinations not used, framework stamps sequences
         var commands = new List<CommandBook>();
 
         foreach (var playerHex in evt.StackChanges.Keys)
@@ -30,7 +30,7 @@ public static class TablePlayerSaga
 
             var releaseFunds = new ReleaseFunds { TableRoot = evt.HandRoot };
 
-            var cmdAny = EventRouter.PackCommand(releaseFunds);
+            var cmdAny = PackCommand(releaseFunds);
 
             commands.Add(
                 new CommandBook

@@ -37,38 +37,38 @@ public class PlayerAggregate : CommandHandler<PlayerState>
     // --- Command handlers ---
 
     [Handles(typeof(RegisterPlayer))]
-    public PlayerRegistered HandleRegister(RegisterPlayer cmd)
+    public PlayerRegistered HandleRegisterPlayer(RegisterPlayer cmd)
     {
-        return RegisterHandler.Handle(cmd, State);
+        return RegisterPlayerHandler.Handle(cmd, State);
     }
 
     [Handles(typeof(DepositFunds))]
-    public FundsDeposited HandleDeposit(DepositFunds cmd)
+    public FundsDeposited HandleDepositFunds(DepositFunds cmd)
     {
-        return DepositHandler.Handle(cmd, State);
+        return DepositFundsHandler.Handle(cmd, State);
     }
 
     [Handles(typeof(WithdrawFunds))]
-    public FundsWithdrawn HandleWithdraw(WithdrawFunds cmd)
+    public FundsWithdrawn HandleWithdrawFunds(WithdrawFunds cmd)
     {
-        return WithdrawHandler.Handle(cmd, State);
+        return WithdrawFundsHandler.Handle(cmd, State);
     }
 
     [Handles(typeof(ReserveFunds))]
-    public FundsReserved HandleReserve(ReserveFunds cmd)
+    public FundsReserved HandleReserveFunds(ReserveFunds cmd)
     {
-        return ReserveHandler.Handle(cmd, State);
+        return ReserveFundsHandler.Handle(cmd, State);
     }
 
     [Handles(typeof(ReleaseFunds))]
-    public FundsReleased HandleRelease(ReleaseFunds cmd)
+    public FundsReleased HandleReleaseFunds(ReleaseFunds cmd)
     {
-        return ReleaseHandler.Handle(cmd, State);
+        return ReleaseFundsHandler.Handle(cmd, State);
     }
 
     [Handles(typeof(TransferFunds))]
-    public FundsTransferred HandleTransfer(TransferFunds cmd)
+    public FundsTransferred HandleTransferFunds(TransferFunds cmd)
     {
-        return TransferHandler.Handle(cmd, State);
+        return TransferFundsHandler.Handle(cmd, State);
     }
 }

@@ -3,7 +3,7 @@ using Angzarr.Client;
 using Angzarr.Examples;
 using Google.Protobuf.WellKnownTypes;
 
-namespace HandFlowOO;
+namespace HandFlow;
 
 // docs:start:pm_state_oo
 /// <summary>
@@ -113,7 +113,7 @@ public class HandFlowPM : ProcessManager<PMState>
     /// Start new betting round after community cards.
     /// </summary>
     [Handles(typeof(CommunityCardsDealt), InputDomain = "hand")]
-    public List<CommandBook> HandleCommunityDealt(
+    public List<CommandBook> HandleCommunityCardsDealt(
         CommunityCardsDealt evt,
         List<EventBook> destinations
     )

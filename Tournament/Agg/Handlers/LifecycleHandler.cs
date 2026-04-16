@@ -6,7 +6,7 @@ namespace Tournament.Agg.Handlers;
 
 public static class LifecycleHandler
 {
-    public static BlindLevelAdvanced HandleAdvanceBlind(AdvanceBlindLevel cmd, TournamentState state)
+    public static BlindLevelAdvanced HandleAdvanceBlindLevel(AdvanceBlindLevel cmd, TournamentState state)
     {
         if (!state.IsRunning)
             throw new CommandRejectedError("Tournament not running");
@@ -34,7 +34,7 @@ public static class LifecycleHandler
         };
     }
 
-    public static PlayerEliminated HandleEliminate(EliminatePlayer cmd, TournamentState state)
+    public static PlayerEliminated HandleEliminatePlayer(EliminatePlayer cmd, TournamentState state)
     {
         if (!state.IsRunning)
             throw new CommandRejectedError("Tournament not running");
@@ -52,7 +52,7 @@ public static class LifecycleHandler
         };
     }
 
-    public static TournamentPaused HandlePause(PauseTournament cmd, TournamentState state)
+    public static TournamentPaused HandlePauseTournament(PauseTournament cmd, TournamentState state)
     {
         if (!state.IsRunning)
             throw new CommandRejectedError("Tournament not running");
@@ -64,7 +64,7 @@ public static class LifecycleHandler
         };
     }
 
-    public static TournamentResumed HandleResume(ResumeTournament cmd, TournamentState state)
+    public static TournamentResumed HandleResumeTournament(ResumeTournament cmd, TournamentState state)
     {
         if (state.Status != TournamentStatus.TournamentPaused)
             throw new CommandRejectedError("Tournament not paused");

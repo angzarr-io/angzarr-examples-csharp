@@ -4,7 +4,7 @@ using Google.Protobuf.WellKnownTypes;
 
 namespace Tournament.Agg.Handlers;
 
-public static class CreateHandler
+public static class CreateTournamentHandler
 {
     public static TournamentCreated Handle(CreateTournament cmd, TournamentState state)
     {

@@ -7,21 +7,21 @@ using Google.Protobuf.WellKnownTypes;
 namespace Hand.SagaPlayer;
 
 /// <summary>
-/// Saga: Hand -> Player
+/// Saga: Hand -> Player (OO Pattern)
+///
 /// Reacts to PotAwarded events from Hand domain.
 /// Sends DepositFunds commands to Player domain.
 /// Sagas are stateless translators - framework handles sequence stamping.
 /// </summary>
-public static class HandPlayerSaga
+public class HandPlayerSaga : Saga
 {
-    public static EventRouter Create()
-    {
-        return new EventRouter("saga-hand-player").Domain("hand").On<PotAwarded>(HandlePotAwarded);
-    }
+    public override string Name => "saga-hand-player";
+    public override string InputDomain => "hand";
+    public override string OutputDomain => "player";
 
-    private static object HandlePotAwarded(PotAwarded evt, List<EventBook> destinations)
+    [Handles(typeof(PotAwarded))]
+    public List<CommandBook> HandlePotAwarded(PotAwarded evt, List<EventBook> destinations)
     {
-        // Sagas are stateless - destinations not used, framework stamps sequences
         var commands = new List<CommandBook>();
 
         foreach (var winner in evt.Winners)
@@ -31,7 +31,7 @@ public static class HandPlayerSaga
                 Amount = new Currency { Amount = winner.Amount, CurrencyCode = "CHIPS" },
             };
 
-            var cmdAny = EventRouter.PackCommand(depositFunds);
+            var cmdAny = PackCommand(depositFunds);
 
             commands.Add(
                 new CommandBook

@@ -53,7 +53,7 @@ public class TableAggregate : CommandHandler<TableState>
     // --- Command handlers ---
 
     [Handles(typeof(CreateTable))]
-    public TableCreated HandleCreate(CreateTable cmd)
+    public TableCreated HandleCreateTable(CreateTable cmd)
     {
         if (Exists)
             throw CommandRejectedError.PreconditionFailed("Table already exists");
@@ -83,7 +83,7 @@ public class TableAggregate : CommandHandler<TableState>
     }
 
     [Handles(typeof(JoinTable))]
-    public PlayerJoined HandleJoin(JoinTable cmd)
+    public PlayerJoined HandleJoinTable(JoinTable cmd)
     {
         if (!Exists)
             throw CommandRejectedError.PreconditionFailed("Table does not exist");
@@ -113,7 +113,7 @@ public class TableAggregate : CommandHandler<TableState>
     }
 
     [Handles(typeof(LeaveTable))]
-    public PlayerLeft HandleLeave(LeaveTable cmd)
+    public PlayerLeft HandleLeaveTable(LeaveTable cmd)
     {
         if (!Exists)
             throw CommandRejectedError.PreconditionFailed("Table does not exist");

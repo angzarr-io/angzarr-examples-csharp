@@ -7,7 +7,7 @@ namespace Player.Agg.Handlers;
 /// <summary>
 /// Handler for WithdrawFunds command.
 /// </summary>
-public static class WithdrawHandler
+public static class WithdrawFundsHandler
 {
     public static FundsWithdrawn Handle(WithdrawFunds cmd, PlayerState state)
     {

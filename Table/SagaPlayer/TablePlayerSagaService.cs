@@ -8,17 +8,12 @@ using Grpc.Core;
 namespace Table.SagaPlayer;
 
 /// <summary>
-/// gRPC service for Table->Player saga.
+/// gRPC service for Table->Player saga (OO pattern).
 /// Sagas are stateless translators - framework handles sequence stamping.
 /// </summary>
 public class TablePlayerSagaService : SagaService.SagaServiceBase
 {
-    private readonly EventRouter _router;
-
-    public TablePlayerSagaService(EventRouter router)
-    {
-        _router = router;
-    }
+    private readonly TablePlayerSaga _saga = new();
 
     public override Task<SagaResponse> Handle(SagaHandleRequest request, ServerCallContext context)
     {
@@ -30,8 +25,7 @@ public class TablePlayerSagaService : SagaService.SagaServiceBase
             if (eventMessage == null)
                 continue;
 
-            // Sagas receive source events only - framework handles destinations
-            var result = _router.DoHandle(eventMessage, new List<EventBook>());
+            var result = _saga.Dispatch(eventMessage, new List<EventBook>());
 
             if (result is CommandBook commandBook)
             {

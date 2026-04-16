@@ -7,7 +7,7 @@ namespace Player.Agg.Handlers;
 /// <summary>
 /// Handler for TransferFunds command.
 /// </summary>
-public static class TransferHandler
+public static class TransferFundsHandler
 {
     public static FundsTransferred Handle(TransferFunds cmd, PlayerState state)
     {

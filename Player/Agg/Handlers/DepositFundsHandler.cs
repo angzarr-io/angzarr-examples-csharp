@@ -7,7 +7,7 @@ namespace Player.Agg.Handlers;
 /// <summary>
 /// Handler for DepositFunds command.
 /// </summary>
-public static class DepositHandler
+public static class DepositFundsHandler
 {
     // docs:start:deposit_guard
     internal static void Guard(PlayerState state)

@@ -51,12 +51,10 @@ COPY Hand/SagaPlayer/Hand.SagaPlayer.csproj ./Hand/SagaPlayer/
 COPY HandFlow/HandFlow.csproj ./HandFlow/
 COPY PrjOutput/PrjOutput.csproj ./PrjOutput/
 COPY Tests/Tests.csproj ./Tests/
-COPY HandFlowOO/HandFlowOO.csproj ./HandFlowOO/
 COPY Player/Upc/Player.Upc.csproj ./Player/Upc/
 COPY PrjCloudEvents/PrjCloudEvents.csproj ./PrjCloudEvents/
-COPY Table/SagaHandOO/Table.SagaHandOO.csproj ./Table/SagaHandOO/
-COPY PrjOutputOO/PrjOutputOO.csproj ./PrjOutputOO/
 COPY Player/SagaTable/Player.SagaTable.csproj ./Player/SagaTable/
+COPY Tournament/Agg/Tournament.Agg.csproj ./Tournament/Agg/
 
 # Restore all packages into the image layer (not just cache mount)
 # so they survive GHA layer caching and --no-restore works in build stages

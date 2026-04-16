@@ -7,11 +7,6 @@
         <RootNamespace>Table.SagaHand</RootNamespace>
     </PropertyGroup>
 
-    <!-- Documentation example - incomplete, requires SagaContext implementation -->
-    <ItemGroup>
-        <Compile Remove="SplitterExample.cs" />
-    </ItemGroup>
-
     <ItemGroup>
         <ProjectReference Include="../../Angzarr.Proto/Angzarr.Proto.csproj" />
         <ProjectReference Include="../../angzarr-client-csharp/Angzarr.Client/Angzarr.Client.csproj" />

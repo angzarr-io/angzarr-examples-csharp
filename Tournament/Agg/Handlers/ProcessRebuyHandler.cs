@@ -5,7 +5,7 @@ using Google.Protobuf.WellKnownTypes;
 
 namespace Tournament.Agg.Handlers;
 
-public static class RebuyHandler
+public static class ProcessRebuyHandler
 {
     public static IMessage Handle(ProcessRebuy cmd, TournamentState state)
     {

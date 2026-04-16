@@ -7,7 +7,7 @@ namespace Player.Agg.Handlers;
 /// <summary>
 /// Handler for ReleaseFunds command.
 /// </summary>
-public static class ReleaseHandler
+public static class ReleaseFundsHandler
 {
     public static FundsReleased Handle(ReleaseFunds cmd, PlayerState state)
     {

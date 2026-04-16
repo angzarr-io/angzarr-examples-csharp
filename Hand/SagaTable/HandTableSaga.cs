@@ -7,23 +7,21 @@ using Google.Protobuf.WellKnownTypes;
 namespace Hand.SagaTable;
 
 /// <summary>
-/// Saga: Hand -> Table
+/// Saga: Hand -> Table (OO Pattern)
+///
 /// Reacts to HandComplete events from Hand domain.
 /// Sends EndHand commands to Table domain.
 /// Sagas are stateless translators - framework handles sequence stamping.
 /// </summary>
-public static class HandTableSaga
+public class HandTableSaga : Saga
 {
-    public static EventRouter Create()
-    {
-        return new EventRouter("saga-hand-table")
-            .Domain("hand")
-            .On<HandComplete>(HandleHandComplete);
-    }
+    public override string Name => "saga-hand-table";
+    public override string InputDomain => "hand";
+    public override string OutputDomain => "table";
 
-    private static object HandleHandComplete(HandComplete evt, List<EventBook> destinations)
+    [Handles(typeof(HandComplete))]
+    public CommandBook HandleHandComplete(HandComplete evt, List<EventBook> destinations)
     {
-        // Sagas are stateless - destinations not used, framework stamps sequences
         var results = evt
             .Winners.Select(winner => new PotResult
             {
@@ -37,7 +35,7 @@ public static class HandTableSaga
         var endHand = new EndHand();
         endHand.Results.AddRange(results);
 
-        var cmdAny = EventRouter.PackCommand(endHand);
+        var cmdAny = PackCommand(endHand);
 
         return new CommandBook
         {

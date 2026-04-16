@@ -17,7 +17,6 @@ public class Program
 
         var builder = WebApplication.CreateBuilder(args);
         builder.Services.AddGrpc();
-        builder.Services.AddSingleton(_ => PlayerTableSaga.Create());
 
         builder.WebHost.ConfigureKestrel(options =>
         {

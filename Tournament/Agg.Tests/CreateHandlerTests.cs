@@ -15,7 +15,7 @@ public class CreateHandlerTests
         var state = new TournamentState();
         state.ApplyCreated(new TournamentCreated { Name = "Existing", BuyIn = 1000, StartingStack = 10000, MaxPlayers = 100 });
 
-        var act = () => CreateHandler.Handle(new CreateTournament
+        var act = () => CreateTournamentHandler.Handle(new CreateTournament
         { Name = "New", BuyIn = 500, StartingStack = 5000, MaxPlayers = 50 }, state);
 
         act.Should().Throw<CommandRejectedError>().WithMessage("*already exists*");
@@ -24,7 +24,7 @@ public class CreateHandlerTests
     [Fact]
     public void RejectsEmptyName()
     {
-        var act = () => CreateHandler.Handle(new CreateTournament
+        var act = () => CreateTournamentHandler.Handle(new CreateTournament
         { Name = "", BuyIn = 1000, StartingStack = 10000, MaxPlayers = 100 }, new TournamentState());
 
         act.Should().Throw<InvalidArgumentError>().WithMessage("*name*");
@@ -33,7 +33,7 @@ public class CreateHandlerTests
     [Fact]
     public void RejectsZeroBuyIn()
     {
-        var act = () => CreateHandler.Handle(new CreateTournament
+        var act = () => CreateTournamentHandler.Handle(new CreateTournament
         { Name = "Test", BuyIn = 0, StartingStack = 10000, MaxPlayers = 100 }, new TournamentState());
 
         act.Should().Throw<InvalidArgumentError>().WithMessage("*positive*");
@@ -42,7 +42,7 @@ public class CreateHandlerTests
     [Fact]
     public void RejectsZeroStartingStack()
     {
-        var act = () => CreateHandler.Handle(new CreateTournament
+        var act = () => CreateTournamentHandler.Handle(new CreateTournament
         { Name = "Test", BuyIn = 1000, StartingStack = 0, MaxPlayers = 100 }, new TournamentState());
 
         act.Should().Throw<InvalidArgumentError>().WithMessage("*positive*");
@@ -51,7 +51,7 @@ public class CreateHandlerTests
     [Fact]
     public void RejectsMaxPlayersLessThan2()
     {
-        var act = () => CreateHandler.Handle(new CreateTournament
+        var act = () => CreateTournamentHandler.Handle(new CreateTournament
         { Name = "Test", BuyIn = 1000, StartingStack = 10000, MaxPlayers = 1 }, new TournamentState());
 
         act.Should().Throw<InvalidArgumentError>().WithMessage("*max_players*");
@@ -60,7 +60,7 @@ public class CreateHandlerTests
     [Fact]
     public void SetsAllFieldsOnSuccess()
     {
-        var result = CreateHandler.Handle(new CreateTournament
+        var result = CreateTournamentHandler.Handle(new CreateTournament
         {
             Name = "Sunday Million",
             GameVariant = GameVariant.TexasHoldem,

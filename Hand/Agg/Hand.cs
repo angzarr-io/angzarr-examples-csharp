@@ -46,7 +46,7 @@ public class HandAggregate : CommandHandler<HandState>
     // --- Command handlers ---
 
     [Handles(typeof(DealCards))]
-    public CardsDealt HandleDeal(DealCards cmd)
+    public CardsDealt HandleDealCards(DealCards cmd)
     {
         if (Exists)
             throw CommandRejectedError.PreconditionFailed("Hand already dealt");
@@ -110,7 +110,7 @@ public class HandAggregate : CommandHandler<HandState>
     }
 
     [Handles(typeof(PlayerAction))]
-    public ActionTaken HandleAction(PlayerAction cmd)
+    public ActionTaken HandlePlayerAction(PlayerAction cmd)
     {
         if (!Exists)
             throw CommandRejectedError.PreconditionFailed("Hand not dealt");
@@ -211,7 +211,7 @@ public class HandAggregate : CommandHandler<HandState>
     }
 
     [Handles(typeof(DealCommunityCards))]
-    public CommunityCardsDealt HandleDealCommunity(DealCommunityCards cmd)
+    public CommunityCardsDealt HandleDealCommunityCards(DealCommunityCards cmd)
     {
         if (!Exists)
             throw CommandRejectedError.PreconditionFailed("Hand not dealt");
@@ -442,7 +442,7 @@ public class HandAggregate : CommandHandler<HandState>
     }
 
     [Handles(typeof(AwardPot))]
-    public IMessage HandleAward(AwardPot cmd)
+    public IMessage HandleAwardPot(AwardPot cmd)
     {
         if (!Exists)
             throw CommandRejectedError.PreconditionFailed("Hand not dealt");

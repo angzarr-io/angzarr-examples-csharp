@@ -24,7 +24,7 @@ public class RegistrationHandlerTests
     [Fact]
     public void Open_RejectsNonExistent()
     {
-        var act = () => RegistrationHandler.HandleOpen(new OpenRegistration(), new TournamentState());
+        var act = () => RegistrationHandler.HandleOpenRegistration(new OpenRegistration(), new TournamentState());
         act.Should().Throw<CommandRejectedError>().WithMessage("*does not exist*");
     }
 
@@ -32,7 +32,7 @@ public class RegistrationHandlerTests
     public void Open_RejectsAlreadyOpen()
     {
         var state = OpenState();
-        var act = () => RegistrationHandler.HandleOpen(new OpenRegistration(), state);
+        var act = () => RegistrationHandler.HandleOpenRegistration(new OpenRegistration(), state);
         act.Should().Throw<CommandRejectedError>().WithMessage("*already open*");
     }
 
@@ -42,7 +42,7 @@ public class RegistrationHandlerTests
         var state = new TournamentState();
         state.ApplyCreated(new TournamentCreated { Name = "T", BuyIn = 1000, StartingStack = 10000, MaxPlayers = 100 });
         state.ApplyTournamentStarted(new TournamentStarted());
-        var act = () => RegistrationHandler.HandleOpen(new OpenRegistration(), state);
+        var act = () => RegistrationHandler.HandleOpenRegistration(new OpenRegistration(), state);
         act.Should().Throw<CommandRejectedError>().WithMessage("*running*");
     }
 
@@ -51,7 +51,7 @@ public class RegistrationHandlerTests
     {
         var state = new TournamentState();
         state.ApplyCreated(new TournamentCreated { Name = "T", BuyIn = 1000, StartingStack = 10000, MaxPlayers = 100 });
-        var result = RegistrationHandler.HandleOpen(new OpenRegistration(), state);
+        var result = RegistrationHandler.HandleOpenRegistration(new OpenRegistration(), state);
         result.Should().NotBeNull();
         result.OpenedAt.Should().NotBeNull();
     }
@@ -61,7 +61,7 @@ public class RegistrationHandlerTests
     {
         var state = new TournamentState();
         state.ApplyCreated(new TournamentCreated { Name = "T", BuyIn = 1000, StartingStack = 10000, MaxPlayers = 100 });
-        var act = () => RegistrationHandler.HandleClose(new CloseRegistration(), state);
+        var act = () => RegistrationHandler.HandleCloseRegistration(new CloseRegistration(), state);
         act.Should().Throw<CommandRejectedError>().WithMessage("*not open*");
     }
 
@@ -74,7 +74,7 @@ public class RegistrationHandlerTests
         state.ApplyPlayerEnrolled(new TournamentPlayerEnrolled
             { PlayerRoot = ByteString.CopyFrom(new byte[] { 2 }), FeePaid = 1000 });
 
-        var result = RegistrationHandler.HandleClose(new CloseRegistration(), state);
+        var result = RegistrationHandler.HandleCloseRegistration(new CloseRegistration(), state);
         result.TotalRegistrations.Should().Be(2);
     }
 
@@ -84,7 +84,7 @@ public class RegistrationHandlerTests
         var state = new TournamentState();
         state.ApplyCreated(new TournamentCreated { Name = "T", BuyIn = 1000, StartingStack = 10000, MaxPlayers = 100 });
 
-        var result = RegistrationHandler.HandleEnroll(
+        var result = RegistrationHandler.HandleEnrollPlayer(
             new EnrollPlayer { PlayerRoot = ByteString.CopyFrom(new byte[] { 1 }) }, state);
 
         result.Should().BeOfType<TournamentEnrollmentRejected>();
@@ -102,7 +102,7 @@ public class RegistrationHandlerTests
         state.ApplyPlayerEnrolled(new TournamentPlayerEnrolled
             { PlayerRoot = ByteString.CopyFrom(new byte[] { 2 }), FeePaid = 1000 });
 
-        var result = RegistrationHandler.HandleEnroll(
+        var result = RegistrationHandler.HandleEnrollPlayer(
             new EnrollPlayer { PlayerRoot = ByteString.CopyFrom(new byte[] { 3 }) }, state);
 
         result.Should().BeOfType<TournamentEnrollmentRejected>();
@@ -116,7 +116,7 @@ public class RegistrationHandlerTests
         var root = ByteString.CopyFrom(new byte[] { 1, 2, 3 });
         state.ApplyPlayerEnrolled(new TournamentPlayerEnrolled { PlayerRoot = root, FeePaid = 1000 });
 
-        var result = RegistrationHandler.HandleEnroll(new EnrollPlayer { PlayerRoot = root }, state);
+        var result = RegistrationHandler.HandleEnrollPlayer(new EnrollPlayer { PlayerRoot = root }, state);
 
         result.Should().BeOfType<TournamentEnrollmentRejected>();
         ((TournamentEnrollmentRejected)result).Reason.Should().Be("already_registered");
@@ -126,7 +126,7 @@ public class RegistrationHandlerTests
     public void Enroll_Success()
     {
         var state = OpenState();
-        var result = RegistrationHandler.HandleEnroll(
+        var result = RegistrationHandler.HandleEnrollPlayer(
             new EnrollPlayer { PlayerRoot = ByteString.CopyFrom(new byte[] { 1, 2, 3 }) }, state);
 
         result.Should().BeOfType<TournamentPlayerEnrolled>();
