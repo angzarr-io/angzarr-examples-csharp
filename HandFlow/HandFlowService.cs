@@ -9,21 +9,6 @@ namespace HandFlow;
 /// </summary>
 public class HandFlowService : ProcessManagerService.ProcessManagerServiceBase
 {
-    public override Task<ProcessManagerPrepareResponse> Prepare(
-        ProcessManagerPrepareRequest request,
-        ServerCallContext context
-    )
-    {
-        var covers = ProcessManager<PMState>.PrepareDestinations<HandFlowPM>(
-            request.Trigger,
-            request.ProcessState
-        );
-
-        var response = new ProcessManagerPrepareResponse();
-        response.Destinations.AddRange(covers);
-        return Task.FromResult(response);
-    }
-
     public override Task<ProcessManagerHandleResponse> Handle(
         ProcessManagerHandleRequest request,
         ServerCallContext context

@@ -44,22 +44,6 @@ public class HandFlowPM : ProcessManager<PMState>
     }
 
     /// <summary>
-    /// Declare the hand destination needed when a hand starts.
-    /// </summary>
-    [Prepares(typeof(HandStarted))]
-    public List<Cover> PrepareHandStarted(HandStarted evt)
-    {
-        return new List<Cover>
-        {
-            new Cover
-            {
-                Domain = "hand",
-                Root = new Angzarr.UUID { Value = evt.HandRoot },
-            },
-        };
-    }
-
-    /// <summary>
     /// Process the HandStarted event.
     ///
     /// Initialize hand process (not persisted in this simplified version).
