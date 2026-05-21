@@ -450,6 +450,17 @@ public class ProjectorSteps
     [Given(@"active players ""(.*)"", ""(.*)"", ""(.*)"" at seats (\d+), (\d+), (\d+)")]
     public void GivenActivePlayersAtSeats(string p1, string p2, string p3, int s1, int s2, int s3)
     {
+        // The shared "a HandStarted event with:" step in ProcessManagerSteps stores
+        // the proto event under "projectorCurrentEvent" in ScenarioContext, but the
+        // local _currentEvent slot stays null. Pull it forward so active players can
+        // be attached to the same proto the projector will render.
+        if (_currentEvent == null
+            && _context.TryGetValue("projectorCurrentEvent", out IMessage? sharedEvt)
+            && sharedEvt != null)
+        {
+            _currentEvent = sharedEvt;
+        }
+
         var players = new[] { (p1, s1), (p2, s2), (p3, s3) };
         if (_currentEvent is HandStarted hs)
         {
@@ -519,7 +530,10 @@ public class ProjectorSteps
         };
     }
 
-    [Given(@"an ActionTaken event for ""(.*)"" action (.+)$")]
+    // Action-only form (FOLD/CHECK). The character class restricts the action
+    // capture to uppercase letters/underscores so amount/pot_total scenarios are
+    // routed to the 4-parameter overload instead of matching here ambiguously.
+    [Given(@"an ActionTaken event for ""(.*)"" action ([A-Z_]+)$")]
     public void GivenAnActionTakenEventForAction(string playerName, string action)
     {
         var playerRoot = $"player-{playerName.ToLower()}";

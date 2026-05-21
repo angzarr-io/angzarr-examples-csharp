@@ -55,18 +55,23 @@ public class TableAggregate : CommandHandler<TableState>
     [Handles(typeof(CreateTable))]
     public TableCreated HandleCreateTable(CreateTable cmd)
     {
+        // Codes mirror examples-python/main/table/agg/errors.py CODE
+        // attributes. Status is derived from the Py shape parent (see
+        // poker/error_shapes.py): MustBePositive / FieldRequired / ValueOutOfRange
+        // → INVALID_ARGUMENT; AggregateAlreadyExists / RelationViolation →
+        // FAILED_PRECONDITION. Notably BigBlindMustExceedSmallBlind is a
+        // RelationViolation so big_blind <= small_blind is a precondition
+        // failure (not an input-shape error).
         if (Exists)
-            throw CommandRejectedError.PreconditionFailed("Table already exists");
+            throw CommandRejectedError.PreconditionFailed("TABLE_ALREADY_EXISTS", "Table already exists");
         if (string.IsNullOrEmpty(cmd.TableName))
-            throw CommandRejectedError.InvalidArgument("table_name is required");
+            throw CommandRejectedError.InvalidArgument("TABLE_NAME_REQUIRED", "table_name is required");
         if (cmd.SmallBlind <= 0)
-            throw CommandRejectedError.InvalidArgument("small_blind must be positive");
-        if (cmd.BigBlind <= 0)
-            throw CommandRejectedError.InvalidArgument("big_blind must be positive");
-        if (cmd.BigBlind < cmd.SmallBlind)
-            throw CommandRejectedError.InvalidArgument("big_blind must be >= small_blind");
+            throw CommandRejectedError.InvalidArgument("SMALL_BLIND_MUST_BE_POSITIVE", "small_blind must be positive");
+        if (cmd.BigBlind <= 0 || cmd.BigBlind < cmd.SmallBlind)
+            throw CommandRejectedError.PreconditionFailed("BIG_BLIND_MUST_EXCEED_SMALL_BLIND", "big_blind must be >= small_blind");
         if (cmd.MaxPlayers < 2 || cmd.MaxPlayers > 10)
-            throw CommandRejectedError.InvalidArgument("max_players must be between 2 and 10");
+            throw CommandRejectedError.InvalidArgument("MAX_PLAYERS_OUT_OF_RANGE", "max_players must be between 2 and 10");
 
         return new TableCreated
         {
@@ -85,20 +90,23 @@ public class TableAggregate : CommandHandler<TableState>
     [Handles(typeof(JoinTable))]
     public PlayerJoined HandleJoinTable(JoinTable cmd)
     {
+        // BoundViolation (BuyInBelowMin / BuyInAboveMax) inherits from
+        // PreconditionError in Py error_shapes — buy-in below the table
+        // minimum is a precondition mismatch, not an input-shape error.
         if (!Exists)
-            throw CommandRejectedError.PreconditionFailed("Table does not exist");
+            throw CommandRejectedError.PreconditionFailed("TABLE_NOT_FOUND", "Table does not exist");
         if (cmd.PlayerRoot.IsEmpty)
-            throw CommandRejectedError.InvalidArgument("player_root is required");
+            throw CommandRejectedError.InvalidArgument("PLAYER_ROOT_REQUIRED", "player_root is required");
         if (State.FindPlayerSeat(cmd.PlayerRoot) != null)
-            throw CommandRejectedError.PreconditionFailed("Player already seated at table");
+            throw CommandRejectedError.PreconditionFailed("PLAYER_ALREADY_SEATED", "Player already seated at table");
         if (IsFull)
-            throw CommandRejectedError.PreconditionFailed("Table is full");
+            throw CommandRejectedError.PreconditionFailed("TABLE_IS_FULL", "Table is full");
         if (cmd.BuyInAmount < MinBuyIn)
-            throw CommandRejectedError.InvalidArgument($"Buy-in must be at least {MinBuyIn}");
+            throw CommandRejectedError.PreconditionFailed("BUY_IN_BELOW_MIN", $"Buy-in must be at least {MinBuyIn}");
         if (cmd.BuyInAmount > MaxBuyIn)
-            throw CommandRejectedError.InvalidArgument($"Buy-in cannot exceed {MaxBuyIn}");
+            throw CommandRejectedError.PreconditionFailed("BUY_IN_ABOVE_MAX", $"Buy-in cannot exceed {MaxBuyIn}");
         if (cmd.PreferredSeat > 0 && State.GetSeat(cmd.PreferredSeat) != null)
-            throw CommandRejectedError.PreconditionFailed("Seat is occupied");
+            throw CommandRejectedError.PreconditionFailed("SEAT_OCCUPIED", $"Seat {cmd.PreferredSeat} is occupied");
 
         var seatPosition = State.FindAvailableSeat(cmd.PreferredSeat) ?? 0;
 
@@ -116,15 +124,15 @@ public class TableAggregate : CommandHandler<TableState>
     public PlayerLeft HandleLeaveTable(LeaveTable cmd)
     {
         if (!Exists)
-            throw CommandRejectedError.PreconditionFailed("Table does not exist");
+            throw CommandRejectedError.PreconditionFailed("TABLE_NOT_FOUND", "Table does not exist");
         if (cmd.PlayerRoot.IsEmpty)
-            throw CommandRejectedError.InvalidArgument("player_root is required");
+            throw CommandRejectedError.InvalidArgument("PLAYER_ROOT_REQUIRED", "player_root is required");
 
         var seat = State.FindPlayerSeat(cmd.PlayerRoot);
         if (seat == null)
-            throw CommandRejectedError.PreconditionFailed("Player is not seated at table");
+            throw CommandRejectedError.PreconditionFailed("PLAYER_NOT_SEATED", "Player is not seated at table");
         if (Status == "in_hand")
-            throw CommandRejectedError.PreconditionFailed("Cannot leave table during a hand");
+            throw CommandRejectedError.PreconditionFailed("CANNOT_LEAVE_DURING_HAND", "Cannot leave table during a hand");
 
         return new PlayerLeft
         {
@@ -142,11 +150,11 @@ public class TableAggregate : CommandHandler<TableState>
     public HandStarted HandleStartHand(StartHand cmd)
     {
         if (!Exists)
-            throw CommandRejectedError.PreconditionFailed("Table does not exist");
+            throw CommandRejectedError.PreconditionFailed("TABLE_NOT_FOUND", "Table does not exist");
         if (Status == "in_hand")
-            throw CommandRejectedError.PreconditionFailed("Hand already in progress");
+            throw CommandRejectedError.PreconditionFailed("HAND_ALREADY_IN_PROGRESS", "Hand already in progress");
         if (ActivePlayerCount < 2)
-            throw CommandRejectedError.PreconditionFailed("Not enough players to start hand");
+            throw CommandRejectedError.PreconditionFailed("NOT_ENOUGH_PLAYERS_TO_START_HAND", "Not enough players to start hand");
 
         var handNumber = HandCount + 1;
         var handRoot = GenerateHandRoot(TableId, handNumber);
@@ -209,11 +217,11 @@ public class TableAggregate : CommandHandler<TableState>
     public HandEnded HandleEndHand(EndHand cmd)
     {
         if (!Exists)
-            throw CommandRejectedError.PreconditionFailed("Table does not exist");
+            throw CommandRejectedError.PreconditionFailed("TABLE_NOT_FOUND", "Table does not exist");
         if (Status != "in_hand")
-            throw CommandRejectedError.PreconditionFailed("No hand in progress");
+            throw CommandRejectedError.PreconditionFailed("NO_HAND_IN_PROGRESS", "No hand in progress");
         if (!cmd.HandRoot.Equals(CurrentHandRoot))
-            throw CommandRejectedError.PreconditionFailed("Hand root mismatch");
+            throw CommandRejectedError.PreconditionFailed("HAND_ROOT_MISMATCH", "Hand root mismatch");
 
         var stackChanges = new Dictionary<string, long>();
         foreach (var result in cmd.Results)
@@ -242,11 +250,11 @@ public class TableAggregate : CommandHandler<TableState>
     public ChipsAdded HandleAddChips(AddChips cmd)
     {
         if (!Exists)
-            throw CommandRejectedError.PreconditionFailed("Table does not exist");
+            throw CommandRejectedError.PreconditionFailed("TABLE_NOT_FOUND", "Table does not exist");
 
         var seat = State.FindPlayerSeat(cmd.PlayerRoot);
         if (seat == null)
-            throw CommandRejectedError.PreconditionFailed("Player is not seated at table");
+            throw CommandRejectedError.PreconditionFailed("PLAYER_NOT_SEATED", "Player is not seated at table");
 
         var newStack = seat.Stack + cmd.Amount;
         return new ChipsAdded
@@ -256,6 +264,141 @@ public class TableAggregate : CommandHandler<TableState>
             NewStack = newStack,
             AddedAt = Timestamp.FromDateTime(DateTime.UtcNow),
         };
+    }
+
+    // ========================================================================
+    // SeatPlayer + AddRebuyChips — HIGH-EX-2.2.1 / HIGH-EX-2.2.2 closure
+    // ========================================================================
+
+    [Handles(typeof(SeatPlayer))]
+    public PlayerSeated HandleSeatPlayer(SeatPlayer cmd)
+    {
+        if (!State.Exists)
+            throw CommandRejectedError.PreconditionFailed("TABLE_NOT_FOUND", "Table does not exist");
+        if (cmd.PlayerRoot.IsEmpty)
+            throw CommandRejectedError.InvalidArgument("PLAYER_ROOT_REQUIRED", "player_root required");
+        if (cmd.Amount <= 0)
+            throw CommandRejectedError.InvalidArgument("AMOUNT_MUST_BE_POSITIVE", "amount must be positive");
+
+        var seatPos = cmd.Seat < 0 ? (State.FindAvailableSeat() ?? -1) : cmd.Seat;
+        if (seatPos < 0)
+            throw CommandRejectedError.PreconditionFailed("TABLE_IS_FULL", "No available seat");
+        if (State.Seats.ContainsKey(seatPos))
+            throw CommandRejectedError.PreconditionFailed("SEAT_OCCUPIED", $"Seat {seatPos} already occupied");
+
+        return new PlayerSeated
+        {
+            PlayerRoot = cmd.PlayerRoot,
+            ReservationId = cmd.ReservationId,
+            SeatPosition = seatPos,
+            Stack = cmd.Amount,
+            SeatedAt = Timestamp.FromDateTime(DateTime.UtcNow),
+        };
+    }
+
+    [Handles(typeof(AddRebuyChips))]
+    public RebuyChipsAdded HandleAddRebuyChips(AddRebuyChips cmd)
+    {
+        if (!State.Exists)
+            throw CommandRejectedError.PreconditionFailed("TABLE_NOT_FOUND", "Table does not exist");
+        if (cmd.Amount <= 0)
+            throw CommandRejectedError.InvalidArgument("AMOUNT_MUST_BE_POSITIVE", "amount must be positive");
+
+        var seat = State.FindPlayerSeat(cmd.PlayerRoot);
+        if (seat == null)
+            throw CommandRejectedError.PreconditionFailed("PLAYER_NOT_SEATED", "Player not seated at table");
+
+        return new RebuyChipsAdded
+        {
+            PlayerRoot = cmd.PlayerRoot,
+            ReservationId = cmd.ReservationId,
+            Seat = cmd.Seat,
+            Amount = cmd.Amount,
+            NewStack = seat.Stack + cmd.Amount,
+            AddedAt = Timestamp.FromDateTime(DateTime.UtcNow),
+        };
+    }
+
+    // ========================================================================
+    // Hand-for-hand handlers (3) — HIGH-EX-2.2.3 closure
+    // ========================================================================
+
+    [Handles(typeof(EnterTableHandForHand))]
+    public TableHandForHandWaiting HandleEnterTableHandForHand(EnterTableHandForHand cmd)
+        => HandForHandHandlers.HandleEnterTableHandForHand(cmd, State);
+
+    [Handles(typeof(MarkTableHandForHandHandComplete))]
+    public TableHandForHandRoundComplete HandleMarkTableHandForHandHandComplete(
+        MarkTableHandForHandHandComplete cmd)
+        => HandForHandHandlers.HandleMarkTableHandForHandHandComplete(cmd, State);
+
+    [Handles(typeof(EndTableHandForHand))]
+    public TableHandForHandEnded HandleEndTableHandForHand(EndTableHandForHand cmd)
+        => HandForHandHandlers.HandleEndTableHandForHand(cmd, State);
+
+    // ========================================================================
+    // PR #12 — ChangeSeats. Design decision 2 (2026-05-18):
+    // current_seat == requested_seat → REJECT with code SEATS_IDENTICAL
+    // (handler-side, emitted BEFORE any seat-lookup logic). Happy path emits
+    // (PlayerLeft, PlayerJoined) tuple mirroring the seat change in the
+    // existing event vocabulary (no SeatsChanged event exists in the proto).
+    // ========================================================================
+
+    [Handles(typeof(ChangeSeats))]
+    public IEnumerable<IMessage> HandleChangeSeats(ChangeSeats cmd)
+    {
+        // PR #12 decision: SEATS_IDENTICAL emitted BEFORE any seat-lookup.
+        if (cmd.CurrentSeat == cmd.RequestedSeat)
+            throw CommandRejectedError.InvalidArgument(
+                ErrorCodes.SeatsIdentical, ErrorMessages.SeatsIdentical);
+
+        if (!Exists)
+            throw CommandRejectedError.PreconditionFailed(
+                "TABLE_NOT_FOUND", "Table does not exist");
+        if (cmd.PlayerRoot.IsEmpty)
+            throw CommandRejectedError.InvalidArgument(
+                "PLAYER_ROOT_REQUIRED", "player_root is required");
+        if (cmd.CurrentSeat < 0)
+            throw CommandRejectedError.InvalidArgument(
+                "CURRENT_SEAT_INVALID", "current_seat must be non-negative");
+        if (cmd.RequestedSeat < 0)
+            throw CommandRejectedError.InvalidArgument(
+                "REQUESTED_SEAT_INVALID", "requested_seat must be non-negative");
+        if (cmd.RequestedSeat >= MaxPlayers)
+            throw CommandRejectedError.InvalidArgument(
+                "REQUESTED_SEAT_OUT_OF_RANGE",
+                $"requested_seat must be < max_players ({MaxPlayers})");
+
+        var current = State.GetSeat(cmd.CurrentSeat);
+        if (current == null || !current.PlayerRoot.Equals(cmd.PlayerRoot))
+            throw CommandRejectedError.PreconditionFailed(
+                "PLAYER_NOT_AT_CURRENT_SEAT",
+                $"Player not seated at seat {cmd.CurrentSeat}");
+        if (State.GetSeat(cmd.RequestedSeat) != null)
+            throw CommandRejectedError.PreconditionFailed(
+                "SEAT_OCCUPIED", $"Seat {cmd.RequestedSeat} is occupied");
+        if (Status == "in_hand")
+            throw CommandRejectedError.PreconditionFailed(
+                "CANNOT_CHANGE_SEAT_DURING_HAND",
+                "Cannot change seats during a hand");
+
+        var changedAt = Timestamp.FromDateTime(DateTime.UtcNow);
+        var left = new PlayerLeft
+        {
+            PlayerRoot = cmd.PlayerRoot,
+            SeatPosition = cmd.CurrentSeat,
+            ChipsCashedOut = current.Stack,
+            LeftAt = changedAt,
+        };
+        var joined = new PlayerJoined
+        {
+            PlayerRoot = cmd.PlayerRoot,
+            SeatPosition = cmd.RequestedSeat,
+            BuyInAmount = current.Stack,
+            Stack = current.Stack,
+            JoinedAt = changedAt,
+        };
+        return new IMessage[] { left, joined };
     }
 
     private static byte[] GenerateHandRoot(string tableId, long handNumber)

@@ -206,6 +206,11 @@ public class PlayerAggregateService : CommandHandlerService.CommandHandlerServic
         return Task.FromResult(response);
     }
 
+    // Canonical proto FQN per `package angzarr_client.proto.examples;` in
+    // proto/angzarr_client/proto/examples/player.proto. The historical
+    // "examples.X" shortcut never matched real wire payloads. The
+    // DeductReservedFunds case was missing entirely — newly added so the
+    // reservation-PM-issued command can reach the player handler.
     private static IMessage? UnpackCommand(Any commandAny)
     {
         var typeUrl = commandAny.TypeUrl;
@@ -213,13 +218,14 @@ public class PlayerAggregateService : CommandHandlerService.CommandHandlerServic
 
         return typeName switch
         {
-            "examples.RegisterPlayer" => commandAny.Unpack<RegisterPlayer>(),
-            "examples.DepositFunds" => commandAny.Unpack<DepositFunds>(),
-            "examples.WithdrawFunds" => commandAny.Unpack<WithdrawFunds>(),
-            "examples.ReserveFunds" => commandAny.Unpack<ReserveFunds>(),
-            "examples.ReleaseFunds" => commandAny.Unpack<ReleaseFunds>(),
-            "examples.TransferFunds" => commandAny.Unpack<TransferFunds>(),
-            "examples.RequestAction" => commandAny.Unpack<RequestAction>(),
+            "angzarr_client.proto.examples.v1.RegisterPlayer" => commandAny.Unpack<RegisterPlayer>(),
+            "angzarr_client.proto.examples.v1.DepositFunds" => commandAny.Unpack<DepositFunds>(),
+            "angzarr_client.proto.examples.v1.WithdrawFunds" => commandAny.Unpack<WithdrawFunds>(),
+            "angzarr_client.proto.examples.v1.ReserveFunds" => commandAny.Unpack<ReserveFunds>(),
+            "angzarr_client.proto.examples.v1.ReleaseFunds" => commandAny.Unpack<ReleaseFunds>(),
+            "angzarr_client.proto.examples.v1.TransferFunds" => commandAny.Unpack<TransferFunds>(),
+            "angzarr_client.proto.examples.v1.RequestAction" => commandAny.Unpack<RequestAction>(),
+            "angzarr_client.proto.examples.v1.DeductReservedFunds" => commandAny.Unpack<DeductReservedFunds>(),
             _ => null,
         };
     }

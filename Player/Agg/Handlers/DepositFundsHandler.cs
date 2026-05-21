@@ -13,7 +13,7 @@ public static class DepositFundsHandler
     internal static void Guard(PlayerState state)
     {
         if (!state.Exists)
-            throw CommandRejectedError.PreconditionFailed("Player does not exist");
+            throw CommandRejectedError.PreconditionFailed("PLAYER_NOT_FOUND", "Player does not exist");
     }
 
     // docs:end:deposit_guard
@@ -23,7 +23,7 @@ public static class DepositFundsHandler
     {
         var amount = cmd.Amount?.Amount ?? 0;
         if (amount <= 0)
-            throw CommandRejectedError.InvalidArgument("amount must be positive");
+            throw CommandRejectedError.InvalidArgument("AMOUNT_MUST_BE_POSITIVE", "amount must be positive");
         return amount;
     }
 

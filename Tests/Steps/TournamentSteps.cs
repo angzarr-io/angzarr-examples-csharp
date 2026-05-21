@@ -100,9 +100,12 @@ public class TournamentSteps
     {
         State.ApplyCreated(new TournamentCreated
         {
-            Name = name, GameVariant = GameVariant.TexasHoldem,
-            BuyIn = 1000, StartingStack = 10000,
-            MaxPlayers = maxPlayers, MinPlayers = 2,
+            Name = name,
+            GameVariant = GameVariant.TexasHoldem,
+            BuyIn = 1000,
+            StartingStack = 10000,
+            MaxPlayers = maxPlayers,
+            MinPlayers = 2,
         });
     }
 
@@ -177,8 +180,12 @@ public class TournamentSteps
         { Level = i, SmallBlind = i * 25, BigBlind = i * 50 }).ToList();
         State.ApplyCreated(new TournamentCreated
         {
-            Name = "Rebuy", GameVariant = GameVariant.TexasHoldem,
-            BuyIn = 1000, StartingStack = 10000, MaxPlayers = 100, MinPlayers = 2,
+            Name = "Rebuy",
+            GameVariant = GameVariant.TexasHoldem,
+            BuyIn = 1000,
+            StartingStack = 10000,
+            MaxPlayers = 100,
+            MinPlayers = 2,
             RebuyConfig = new RebuyConfig
             { Enabled = true, MaxRebuys = max, RebuyLevelCutoff = cutoff, RebuyCost = 1000, RebuyChips = 10000 },
             BlindStructure = { blinds },
@@ -196,8 +203,12 @@ public class TournamentSteps
         { Level = i, SmallBlind = i * 25, BigBlind = i * 50 }).ToList();
         State.ApplyCreated(new TournamentCreated
         {
-            Name = "Blind", GameVariant = GameVariant.TexasHoldem,
-            BuyIn = 1000, StartingStack = 10000, MaxPlayers = 100, MinPlayers = 2,
+            Name = "Blind",
+            GameVariant = GameVariant.TexasHoldem,
+            BuyIn = 1000,
+            StartingStack = 10000,
+            MaxPlayers = 100,
+            MinPlayers = 2,
             BlindStructure = { blinds },
         });
         RegistrationOpenedEvent();

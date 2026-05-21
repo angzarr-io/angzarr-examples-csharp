@@ -442,8 +442,15 @@ public class HandAggregate : CommandHandler<HandState>
     }
 
     [Handles(typeof(AwardPot))]
-    public IMessage HandleAwardPot(AwardPot cmd)
+    public IEnumerable<IMessage> HandleAwardPot(AwardPot cmd)
     {
+        // Canonical Python (examples-python/main/hand/agg/handlers/hand.py
+        // `handle_award_pot`) returns the (PotAwarded, HandComplete) tuple.
+        // Emitting *both* events keeps consumer parity: hand→player saga
+        // reacts to PotAwarded; downstream projectors/PMs observe HandComplete
+        // to close out the hand lifecycle. Emitting only HandComplete (the
+        // historical C# bug) drops the saga trigger and breaks 22+
+        // cucumber scenarios.
         if (!Exists)
             throw CommandRejectedError.PreconditionFailed("Hand not dealt");
         if (Status == "complete")
@@ -485,17 +492,104 @@ public class HandAggregate : CommandHandler<HandState>
             })
             .ToList();
 
+        var awardedAt = Timestamp.FromDateTime(DateTime.UtcNow);
+        var potEvent = new PotAwarded { AwardedAt = awardedAt };
+        potEvent.Winners.AddRange(winners);
+
         var completeEvent = new HandComplete
         {
             TableRoot = TableRoot,
             HandNumber = HandNumber,
-            CompletedAt = Timestamp.FromDateTime(DateTime.UtcNow),
+            CompletedAt = awardedAt,
         };
         completeEvent.Winners.AddRange(winners);
         completeEvent.FinalStacks.AddRange(finalStacks);
 
-        return completeEvent;
+        // Python ordering: PotAwarded first, HandComplete second.
+        return new IMessage[] { potEvent, completeEvent };
     }
+
+    // ========================================================================
+    // Action-clock + verbal-action + correction (4) — HIGH-EX-PY-RS-1 closure
+    // ========================================================================
+
+    [Handles(typeof(StartActionClock))]
+    public ActionClockStarted HandleStartActionClock(StartActionClock cmd)
+        => ActionClockHandlers.HandleStartActionClock(cmd, State);
+
+    [Handles(typeof(DeclareAction))]
+    public ActionTaken HandleDeclareAction(DeclareAction cmd)
+        => ActionClockHandlers.HandleDeclareAction(cmd, State);
+
+    [Handles(typeof(PullBackPriorChip))]
+    public PriorChipPulledBack HandlePullBackPriorChip(PullBackPriorChip cmd)
+        => ActionClockHandlers.HandlePullBackPriorChip(cmd, State);
+
+    [Handles(typeof(CorrectIllegalBet))]
+    public UnderbetCorrected HandleCorrectIllegalBet(CorrectIllegalBet cmd)
+        => ActionClockHandlers.HandleCorrectIllegalBet(cmd, State);
+
+    // ========================================================================
+    // PR #12 — 14 hand rules handlers (misdeal / fouled / redeal /
+    // premature streets / stud / door card scramble / button replace)
+    // Implementations live in HandRulesHandlers.cs.
+    // ========================================================================
+
+    [Handles(typeof(DeclareMisdeal))]
+    public MisdealDeclared HandleDeclareMisdeal(DeclareMisdeal cmd)
+        => HandRulesHandlers.HandleDeclareMisdeal(cmd, State);
+
+    [Handles(typeof(ReportFouledDeck))]
+    public FouledDeckDetected HandleReportFouledDeck(ReportFouledDeck cmd)
+        => HandRulesHandlers.HandleReportFouledDeck(cmd, State);
+
+    [Handles(typeof(RedealHand))]
+    public HandRedealt HandleRedealHand(RedealHand cmd)
+        => HandRulesHandlers.HandleRedealHand(cmd, State);
+
+    [Handles(typeof(ReplaceButtonCard))]
+    public ButtonCardReplaced HandleReplaceButtonCard(ReplaceButtonCard cmd)
+        => HandRulesHandlers.HandleReplaceButtonCard(cmd, State);
+
+    [Handles(typeof(ReportPrematureFlop))]
+    public PrematureFlopDetected HandleReportPrematureFlop(ReportPrematureFlop cmd)
+        => HandRulesHandlers.HandleReportPrematureFlop(cmd, State);
+
+    [Handles(typeof(ReportPrematureTurn))]
+    public PrematureTurnDetected HandleReportPrematureTurn(ReportPrematureTurn cmd)
+        => HandRulesHandlers.HandleReportPrematureTurn(cmd, State);
+
+    [Handles(typeof(ReportPrematureRiver))]
+    public PrematureRiverDetected HandleReportPrematureRiver(ReportPrematureRiver cmd)
+        => HandRulesHandlers.HandleReportPrematureRiver(cmd, State);
+
+    [Handles(typeof(DealStudStreet))]
+    public StudStreetDealt HandleDealStudStreet(DealStudStreet cmd)
+        => HandRulesHandlers.HandleDealStudStreet(cmd, State);
+
+    [Handles(typeof(DealStudCommunityCard))]
+    public StudCommunityCardDealt HandleDealStudCommunityCard(DealStudCommunityCard cmd)
+        => HandRulesHandlers.HandleDealStudCommunityCard(cmd, State);
+
+    [Handles(typeof(ScrambleAllDownCards))]
+    public StudDoorCardSelected HandleScrambleAllDownCards(ScrambleAllDownCards cmd)
+        => HandRulesHandlers.HandleScrambleAllDownCards(cmd, State);
+
+    [Handles(typeof(ReportExposedStudDowncard))]
+    public StudDownCardConverted HandleReportExposedStudDowncard(ReportExposedStudDowncard cmd)
+        => HandRulesHandlers.HandleReportExposedStudDowncard(cmd, State);
+
+    [Handles(typeof(ReplaceSeventhStreetCard))]
+    public SeventhStreetCardReplaced HandleReplaceSeventhStreetCard(ReplaceSeventhStreetCard cmd)
+        => HandRulesHandlers.HandleReplaceSeventhStreetCard(cmd, State);
+
+    [Handles(typeof(CorrectBringIn))]
+    public BringInCorrected HandleCorrectBringIn(CorrectBringIn cmd)
+        => HandRulesHandlers.HandleCorrectBringIn(cmd, State);
+
+    [Handles(typeof(ReportPrematureStudCard))]
+    public PrematureStudCardDetected HandleReportPrematureStudCard(ReportPrematureStudCard cmd)
+        => HandRulesHandlers.HandleReportPrematureStudCard(cmd, State);
 
     private static (List<PlayerHoleCards> PlayerCards, List<Card> RemainingDeck) DealHoleCards(
         GameVariant variant,

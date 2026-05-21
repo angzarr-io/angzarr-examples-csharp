@@ -11,17 +11,17 @@ public static class ReleaseFundsHandler
 {
     public static FundsReleased Handle(ReleaseFunds cmd, PlayerState state)
     {
-        // Guard
         if (!state.Exists)
-            throw CommandRejectedError.PreconditionFailed("Player does not exist");
+            throw CommandRejectedError.PreconditionFailed("PLAYER_NOT_FOUND", "Player does not exist");
 
-        // Validate
-        var tableKey = Convert.ToHexString(cmd.TableRoot.ToByteArray()).ToLowerInvariant();
+        var tableKey = Convert.ToHexString(cmd.Key.ToByteArray()).ToLowerInvariant();
         if (
             !state.TableReservations.TryGetValue(tableKey, out var reservedForTable)
             || reservedForTable == 0
         )
-            throw CommandRejectedError.PreconditionFailed("No funds reserved for this table");
+            throw CommandRejectedError.PreconditionFailed(
+                "NO_FUNDS_RESERVED_FOR_TABLE",
+                "No funds reserved for this table");
 
         // Compute
         var newReserved = state.ReservedFunds - reservedForTable;
@@ -29,7 +29,7 @@ public static class ReleaseFundsHandler
         return new FundsReleased
         {
             Amount = new Currency { Amount = reservedForTable, CurrencyCode = "CHIPS" },
-            TableRoot = cmd.TableRoot,
+            Key = cmd.Key,
             NewAvailableBalance = new Currency { Amount = newAvailable, CurrencyCode = "CHIPS" },
             NewReservedBalance = new Currency { Amount = newReserved, CurrencyCode = "CHIPS" },
             ReleasedAt = Timestamp.FromDateTime(DateTime.UtcNow),

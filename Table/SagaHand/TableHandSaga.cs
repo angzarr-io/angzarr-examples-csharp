@@ -31,9 +31,9 @@ public class TableHandSaga : Saga
     /// Called with the source event. Framework handles sequence stamping.
     /// </summary>
     [Handles(typeof(HandStarted))]
-    public CommandBook HandleHandStarted(HandStarted evt, List<EventBook> destinations)
+    public CommandBook HandleHandStarted(HandStarted evt)
     {
-        // Sagas are stateless - destinations not used, framework stamps sequences
+        // Sagas are stateless - framework stamps sequences
 
         // Convert SeatSnapshot to PlayerInHand
         var players = evt

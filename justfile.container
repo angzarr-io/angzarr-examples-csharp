@@ -10,11 +10,27 @@ SLN := "Angzarr.Examples.sln"
 default:
     @just --list
 
-# Generate C# proto code from .proto sources via buf
-proto-gen:
+# Proto regen executor. Invokes `buf generate` which emits *.cs into
+# Angzarr.Proto/Generated/ per buf.gen.yaml. See the host justfile's
+# `generate-proto` orchestration for the mtime-guarded entry point.
+# Per project_proto_generation_model `buf generate` is the EXECUTOR and
+# `just` owns the trigger; downstream `dotnet build` consumes pre-emitted
+# .cs files via the default SDK Compile glob (no Grpc.Tools / protoc
+# transitive regen).
+generate-proto-force:
     buf generate
 
-restore: proto-gen
+# Legacy aliases.
+proto-gen: generate-proto-force
+proto: generate-proto-force
+
+# NOTE: proto regen is NOT a recipe dep here — it runs once on the host
+# (via the host justfile's `generate-proto` mtime-guarded entry point)
+# BEFORE the container is started. Inside the container we consume the
+# pre-emitted Angzarr.Proto/Generated/*.cs. Re-running buf inside the
+# container would be wasted work and would require buf in PATH.
+
+restore:
     dotnet restore {{SLN}}
 
 build: restore

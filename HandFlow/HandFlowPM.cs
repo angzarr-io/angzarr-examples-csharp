@@ -7,13 +7,33 @@ namespace HandFlow;
 
 // docs:start:pm_state_oo
 /// <summary>
+/// Hand-flow phase enum mirroring the Python/Rust canonical 9-phase set.
+/// Closes HIGH-EX-4.1 (enum lift) for C#.
+/// Full transition-table integration deferred to v2 per Java precedent.
+/// </summary>
+public enum HandPhase
+{
+    WAITING_FOR_START,
+    DEALING,
+    POSTING_BLINDS,
+    BETTING,
+    DEALING_COMMUNITY,
+    DRAW,
+    SHOWDOWN,
+    AWARDING_POT,
+    COMPLETE,
+}
+
+/// <summary>
 /// PM's aggregate state (rebuilt from its own events).
-/// For simplicity in this example, we use a minimal state.
+/// Expanded to track phase per Python/Rust canonical (HIGH-EX-4.1).
 /// </summary>
 public class PMState
 {
     public byte[]? HandRoot { get; set; }
     public bool HandInProgress { get; set; }
+    public HandPhase Phase { get; set; } = HandPhase.WAITING_FOR_START;
+    public GameVariant GameVariant { get; set; } = GameVariant.Unspecified;
 }
 
 // docs:end:pm_state_oo

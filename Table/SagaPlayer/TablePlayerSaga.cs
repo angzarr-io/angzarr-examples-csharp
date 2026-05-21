@@ -20,7 +20,7 @@ public class TablePlayerSaga : Saga
     public override string OutputDomain => "player";
 
     [Handles(typeof(HandEnded))]
-    public List<CommandBook> HandleHandEnded(HandEnded evt, List<EventBook> destinations)
+    public List<CommandBook> HandleHandEnded(HandEnded evt)
     {
         var commands = new List<CommandBook>();
 
@@ -28,7 +28,7 @@ public class TablePlayerSaga : Saga
         {
             var playerRoot = ByteString.CopyFrom(Convert.FromHexString(playerHex));
 
-            var releaseFunds = new ReleaseFunds { TableRoot = evt.HandRoot };
+            var releaseFunds = new ReleaseFunds { Key = evt.HandRoot };
 
             var cmdAny = PackCommand(releaseFunds);
 

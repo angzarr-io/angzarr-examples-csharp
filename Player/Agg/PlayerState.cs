@@ -75,7 +75,7 @@ public class PlayerState
                 {
                     state.ReservedFunds = evt.NewReservedBalance.Amount;
                 }
-                var tableKey = Convert.ToHexString(evt.TableRoot.ToByteArray()).ToLowerInvariant();
+                var tableKey = Convert.ToHexString(evt.Key.ToByteArray()).ToLowerInvariant();
                 if (evt.Amount != null)
                 {
                     state.TableReservations[tableKey] = evt.Amount.Amount;
@@ -89,7 +89,7 @@ public class PlayerState
                 {
                     state.ReservedFunds = evt.NewReservedBalance.Amount;
                 }
-                var tableKey = Convert.ToHexString(evt.TableRoot.ToByteArray()).ToLowerInvariant();
+                var tableKey = Convert.ToHexString(evt.Key.ToByteArray()).ToLowerInvariant();
                 state.TableReservations.Remove(tableKey);
             }
         )
@@ -99,6 +99,29 @@ public class PlayerState
                 if (evt.NewBalance != null)
                 {
                     state.Bankroll = evt.NewBalance.Amount;
+                }
+            }
+        )
+        .On<FundsDeducted>(
+            (state, evt) =>
+            {
+                if (evt.NewBalance != null)
+                {
+                    state.Bankroll = evt.NewBalance.Amount;
+                }
+                if (evt.NewReservedBalance != null)
+                {
+                    state.ReservedFunds = evt.NewReservedBalance.Amount;
+                }
+                var key = Convert.ToHexString(evt.Key.ToByteArray()).ToLowerInvariant();
+                if (state.TableReservations.TryGetValue(key, out var prior))
+                {
+                    var amount = evt.Amount?.Amount ?? 0;
+                    var remaining = prior - amount;
+                    if (remaining > 0)
+                        state.TableReservations[key] = remaining;
+                    else
+                        state.TableReservations.Remove(key);
                 }
             }
         );

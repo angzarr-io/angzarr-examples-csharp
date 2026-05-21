@@ -15,20 +15,22 @@ public static class ReserveFundsHandler
 {
     public static FundsReserved Handle(ReserveFunds cmd, PlayerState state)
     {
-        // Guard
         if (!state.Exists)
-            throw CommandRejectedError.PreconditionFailed("Player does not exist");
+            throw CommandRejectedError.PreconditionFailed("PLAYER_NOT_FOUND", "Player does not exist");
 
-        // Validate
         var amount = cmd.Amount?.Amount ?? 0;
         if (amount <= 0)
-            throw CommandRejectedError.InvalidArgument("amount must be positive");
+            throw CommandRejectedError.InvalidArgument("AMOUNT_MUST_BE_POSITIVE", "amount must be positive");
 
-        var tableKey = Convert.ToHexString(cmd.TableRoot.ToByteArray()).ToLowerInvariant();
+        var tableKey = Convert.ToHexString(cmd.Key.ToByteArray()).ToLowerInvariant();
         if (state.TableReservations.ContainsKey(tableKey))
-            throw CommandRejectedError.PreconditionFailed("Funds already reserved for this table");
+            throw CommandRejectedError.PreconditionFailed(
+                "FUNDS_ALREADY_RESERVED_FOR_TABLE",
+                "Funds already reserved for this table");
         if (amount > state.AvailableBalance)
-            throw CommandRejectedError.PreconditionFailed("Insufficient funds");
+            throw CommandRejectedError.PreconditionFailed(
+                "INSUFFICIENT_FUNDS",
+                "Insufficient funds");
 
         // Compute
         var newReserved = state.ReservedFunds + amount;
@@ -36,7 +38,7 @@ public static class ReserveFundsHandler
         return new FundsReserved
         {
             Amount = cmd.Amount,
-            TableRoot = cmd.TableRoot,
+            Key = cmd.Key,
             NewAvailableBalance = new Currency { Amount = newAvailable, CurrencyCode = "CHIPS" },
             NewReservedBalance = new Currency { Amount = newReserved, CurrencyCode = "CHIPS" },
             ReservedAt = Timestamp.FromDateTime(DateTime.UtcNow),

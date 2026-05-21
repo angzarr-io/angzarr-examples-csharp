@@ -20,7 +20,7 @@ public class HandTableSaga : Saga
     public override string OutputDomain => "table";
 
     [Handles(typeof(HandComplete))]
-    public CommandBook HandleHandComplete(HandComplete evt, List<EventBook> destinations)
+    public CommandBook HandleHandComplete(HandComplete evt)
     {
         var results = evt
             .Winners.Select(winner => new PotResult

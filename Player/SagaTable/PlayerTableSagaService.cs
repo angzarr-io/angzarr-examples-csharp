@@ -20,42 +20,20 @@ public class PlayerTableSagaService : SagaService.SagaServiceBase
     public override Task<SagaResponse> Handle(SagaHandleRequest request, ServerCallContext context)
     {
         var response = new SagaResponse();
-
-        // Set source root for handler access
         _saga.SetSourceRoot(request.Source);
+        var root = request.Source.Cover?.Root?.Value.ToByteArray();
+        var correlationId = request.Source.Cover?.CorrelationId ?? "";
 
         foreach (var page in request.Source.Pages)
         {
-            var eventMessage = UnpackEvent(page.Event);
-            if (eventMessage == null)
+            if (page.Event == null)
                 continue;
-
-            var result = _saga.Dispatch(eventMessage, new List<EventBook>());
-
-            // This saga emits facts (EventBooks), not commands
-            if (result is EventBook eventBook)
-            {
-                response.Events.Add(eventBook);
-            }
-            else if (result is List<EventBook> eventBooks)
-            {
-                response.Events.AddRange(eventBooks);
-            }
+            response.Commands.AddRange(_saga.Dispatch(page.Event, root, correlationId));
         }
 
+        // Facts emitted via EmitFact() are collected here
+        response.Events.AddRange(_saga.CollectEvents());
+
         return Task.FromResult(response);
-    }
-
-    private static IMessage? UnpackEvent(Any eventAny)
-    {
-        var typeUrl = eventAny.TypeUrl;
-        var typeName = typeUrl.Contains('/') ? typeUrl.Split('/').Last() : typeUrl;
-
-        return typeName switch
-        {
-            "examples.PlayerSittingOut" => eventAny.Unpack<PlayerSittingOut>(),
-            "examples.PlayerReturningToPlay" => eventAny.Unpack<PlayerReturningToPlay>(),
-            _ => null,
-        };
     }
 }

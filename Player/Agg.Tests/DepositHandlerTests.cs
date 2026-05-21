@@ -17,7 +17,7 @@ public class DepositHandlerTests
             Amount = new Currency { Amount = 500, CurrencyCode = "CHIPS" },
         };
 
-        var evt = DepositFundsHandler.Compute(cmd, state, 500);
+        var evt = DepositFundsHandler.Handle(cmd, state);
 
         Assert.Equal(1500, evt.NewBalance.Amount);
     }
@@ -26,8 +26,12 @@ public class DepositHandlerTests
     public void TestDepositRejectsNonExistentPlayer()
     {
         var state = new PlayerState(); // PlayerId empty = doesn't exist
+        var cmd = new DepositFunds
+        {
+            Amount = new Currency { Amount = 500, CurrencyCode = "CHIPS" },
+        };
 
-        var ex = Assert.Throws<CommandRejectedError>(() => DepositFundsHandler.Guard(state));
+        var ex = Assert.Throws<CommandRejectedError>(() => DepositFundsHandler.Handle(cmd, state));
 
         Assert.Contains("does not exist", ex.Message);
     }
@@ -35,12 +39,13 @@ public class DepositHandlerTests
     [Fact]
     public void TestDepositRejectsZeroAmount()
     {
+        var state = new PlayerState { PlayerId = "p" };
         var cmd = new DepositFunds
         {
             Amount = new Currency { Amount = 0, CurrencyCode = "CHIPS" },
         };
 
-        var ex = Assert.Throws<CommandRejectedError>(() => DepositFundsHandler.Validate(cmd));
+        var ex = Assert.Throws<CommandRejectedError>(() => DepositFundsHandler.Handle(cmd, state));
 
         Assert.Contains("positive", ex.Message);
     }

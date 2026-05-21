@@ -317,21 +317,16 @@ public class AcceptanceSyncSteps
     [Then(@"the response does not include cascade results$")]
     public void ThenResponseNoCascadeResults()
     {
-        // In ASYNC mode, no cascade results
-        if (LastResponse != null)
-        {
-            LastResponse.CascadeErrors.Should().BeEmpty("ASYNC mode should not include cascade errors");
-        }
+        // cascade_errors field removed from CommandResponse (proto evolution).
+        // Cascade failures now surface as a top-level RPC error (LastError).
+        LastError.Should().BeNull("ASYNC mode should not surface cascade errors");
     }
 
     [Then(@"the response does not include cascade results from sagas")]
     public void ThenResponseNoCascadeResultsFromSagas()
     {
-        // In SIMPLE mode, no cascade results from sagas
-        if (LastResponse != null)
-        {
-            LastResponse.CascadeErrors.Should().BeEmpty("SIMPLE mode should not include cascade errors");
-        }
+        // cascade_errors field removed from CommandResponse (proto evolution).
+        LastError.Should().BeNull("SIMPLE mode should not surface cascade errors");
     }
 
     [Then(@"the response includes projection updates for ""(.*)""")]
@@ -468,9 +463,9 @@ public class AcceptanceSyncSteps
     [Then(@"the response includes cascade_errors with the saga failure")]
     public void ThenResponseIncludesCascadeErrors()
     {
-        LastResponse.Should().NotBeNull("should have a response in CONTINUE mode");
-        LastResponse!.CascadeErrors.Count.Should().BeGreaterThan(0,
-            "response should include cascade errors");
+        // cascade_errors field removed from CommandResponse (proto evolution).
+        // Saga failures now surface as top-level RPC error (LastError).
+        LastError.Should().NotBeNull("CONTINUE mode should surface cascade errors via top-level RPC error");
     }
 
     [Then(@"the response includes successful projection updates")]
@@ -593,10 +588,8 @@ public class AcceptanceSyncSteps
     [Then(@"the response has empty cascade_results")]
     public void ThenEmptyResponse()
     {
-        if (LastResponse != null)
-        {
-            LastResponse.CascadeErrors.Should().BeEmpty();
-        }
+        // cascade_errors field removed from CommandResponse.
+        LastError.Should().BeNull();
     }
 
     [Then(@"the saga produces no commands")]
@@ -614,9 +607,8 @@ public class AcceptanceSyncSteps
     [Then(@"all saga errors are collected in cascade_errors")]
     public void ThenAllSagaErrorsCollected()
     {
-        LastResponse.Should().NotBeNull("should have a response");
-        LastResponse!.CascadeErrors.Count.Should().BeGreaterThan(0,
-            "all saga errors should be collected in cascade_errors");
+        // cascade_errors field removed from CommandResponse.
+        LastError.Should().NotBeNull("saga errors surface via top-level RPC error");
     }
 
     // =========================================================================

@@ -18,37 +18,17 @@ public class HandTableSagaService : SagaService.SagaServiceBase
     public override Task<SagaResponse> Handle(SagaHandleRequest request, ServerCallContext context)
     {
         var response = new SagaResponse();
+        var root = request.Source.Cover?.Root?.Value.ToByteArray();
+        var correlationId = request.Source.Cover?.CorrelationId ?? "";
 
         foreach (var page in request.Source.Pages)
         {
-            var eventMessage = UnpackEvent(page.Event);
-            if (eventMessage == null)
+            if (page.Event == null)
                 continue;
-
-            var result = _saga.Dispatch(eventMessage, new List<EventBook>());
-
-            if (result is CommandBook commandBook)
-            {
-                response.Commands.Add(commandBook);
-            }
-            else if (result is List<CommandBook> commandBooks)
-            {
-                response.Commands.AddRange(commandBooks);
-            }
+            var commands = _saga.Dispatch(page.Event, root, correlationId);
+            response.Commands.AddRange(commands);
         }
 
         return Task.FromResult(response);
-    }
-
-    private static IMessage? UnpackEvent(Any eventAny)
-    {
-        var typeUrl = eventAny.TypeUrl;
-        var typeName = typeUrl.Contains('/') ? typeUrl.Split('/').Last() : typeUrl;
-
-        return typeName switch
-        {
-            "examples.HandComplete" => eventAny.Unpack<HandComplete>(),
-            _ => null,
-        };
     }
 }

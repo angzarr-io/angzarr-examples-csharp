@@ -426,7 +426,7 @@ public class SagaSteps
             {
                 var cmd = new ReleaseFunds
                 {
-                    TableRoot = he.HandRoot,
+                    Key = he.HandRoot,
                 };
                 _resultCommands.Add(cmd);
             }

@@ -20,15 +20,17 @@ public static class RegisterPlayerHandler
 {
     public static PlayerRegistered Handle(RegisterPlayer cmd, PlayerState state)
     {
-        // Guard
+        // Codes mirror examples-python/main/player/agg/errors.py CODE
+        // attributes. Statuses follow the Py shape parents in
+        // poker/error_shapes.py (FieldRequired → ValidationError →
+        // INVALID_ARGUMENT; AggregateAlreadyExists → PreconditionError →
+        // FAILED_PRECONDITION).
         if (state.Exists)
-            throw CommandRejectedError.PreconditionFailed("Player already exists");
-
-        // Validate
+            throw CommandRejectedError.PreconditionFailed("PLAYER_ALREADY_EXISTS", "Player already exists");
         if (string.IsNullOrEmpty(cmd.DisplayName))
-            throw CommandRejectedError.InvalidArgument("display_name is required");
+            throw CommandRejectedError.InvalidArgument("DISPLAY_NAME_REQUIRED", "display_name is required");
         if (string.IsNullOrEmpty(cmd.Email))
-            throw CommandRejectedError.InvalidArgument("email is required");
+            throw CommandRejectedError.InvalidArgument("EMAIL_REQUIRED", "email is required");
 
         // Compute
         return new PlayerRegistered

@@ -1,6 +1,6 @@
 version: v2
 inputs:
-  - directory: angzarr-project/proto
+  - directory: .
     exclude_paths:
       - angzarr-project/proto/examples/ai_sidecar.proto
 plugins:

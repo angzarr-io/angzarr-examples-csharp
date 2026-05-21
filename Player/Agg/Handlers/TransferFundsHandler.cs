@@ -11,9 +11,8 @@ public static class TransferFundsHandler
 {
     public static FundsTransferred Handle(TransferFunds cmd, PlayerState state)
     {
-        // Guard
         if (!state.Exists)
-            throw CommandRejectedError.PreconditionFailed("Player does not exist");
+            throw CommandRejectedError.PreconditionFailed("PLAYER_NOT_FOUND", "Player does not exist");
 
         // Compute
         var amount = cmd.Amount?.Amount ?? 0;

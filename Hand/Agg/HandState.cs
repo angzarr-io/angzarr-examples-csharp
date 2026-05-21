@@ -269,13 +269,15 @@ public class HandState
             }
         )
         .On<CardsRevealed>(
-            (state, evt) => {
+            (state, evt) =>
+            {
                 // Revealing cards during showdown
                 // Could store revealed hands for display
             }
         )
         .On<CardsMucked>(
-            (state, evt) => {
+            (state, evt) =>
+            {
                 // Player mucked their cards
             }
         )

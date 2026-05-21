@@ -13,7 +13,21 @@
         <ProjectReference Include="../Player/Agg/Player.Agg.csproj" />
         <ProjectReference Include="../Table/Agg/Table.Agg.csproj" />
         <ProjectReference Include="../Hand/Agg/Hand.Agg.csproj" />
+        <ProjectReference Include="../Hand/GameRules/Hand.GameRules.csproj" />
         <ProjectReference Include="../Tournament/Agg/Tournament.Agg.csproj" />
+        <!-- Reservation aggregate hosts orchestration commands (Initiate/Confirm/Release
+             for buy-in / rebuy / tournament-registration) that the player.feature
+             scenarios exercise via PlayerSteps. -->
+        <ProjectReference Include="../Reservation/Agg/Reservation.Agg.csproj" />
+        <!-- ReservationPM — the consolidated BuyIn / Rebuy / Registration PM, exercised
+             by features/example/unit/process_manager.feature scenarios EU-0421..0440. -->
+        <ProjectReference Include="../Reservation/Pmg/Reservation.Pmg.csproj" />
+        <!-- Saga projects backing saga.feature (TableSyncStart/Complete, HandPayout,
+             HandResults — the feature names map onto these per-direction sagas). -->
+        <ProjectReference Include="../Table/SagaHand/Table.SagaHand.csproj" />
+        <ProjectReference Include="../Hand/SagaTable/Hand.SagaTable.csproj" />
+        <ProjectReference Include="../Hand/SagaPlayer/Hand.SagaPlayer.csproj" />
+        <ProjectReference Include="../Table/SagaPlayer/Table.SagaPlayer.csproj" />
     </ItemGroup>
 
     <ItemGroup>

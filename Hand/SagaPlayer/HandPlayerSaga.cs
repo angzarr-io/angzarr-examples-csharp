@@ -20,7 +20,7 @@ public class HandPlayerSaga : Saga
     public override string OutputDomain => "player";
 
     [Handles(typeof(PotAwarded))]
-    public List<CommandBook> HandlePotAwarded(PotAwarded evt, List<EventBook> destinations)
+    public List<CommandBook> HandlePotAwarded(PotAwarded evt)
     {
         var commands = new List<CommandBook>();
 

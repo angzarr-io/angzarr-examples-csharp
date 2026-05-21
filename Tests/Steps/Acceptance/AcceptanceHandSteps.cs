@@ -603,12 +603,15 @@ public class AcceptanceHandSteps
     // =========================================================================
     // Then steps - Stack verification
     // =========================================================================
+    // NOTE: `"(.*)" stack is (\d+)` is owned by ProcessManagerSteps.cs (unit
+    // feature only — references process-manager-managed state). Acceptance
+    // features do not use this phrasing; only `"(.*)" has stack (\d+)` below
+    // is acceptance-tier.
 
-    [Then(@"""(.*)"" stack is (\d+)")]
-    public void ThenPlayerStackIs(string playerName, int amount)
+    [Then(@"""(.*)"" has stack (\d+)")]
+    public void ThenPlayerHasStack(string playerName, int amount)
     {
         LastError.Should().BeNull("command should have succeeded");
-        // Check player stack from events
         if (LastResponse?.Events?.Pages != null)
         {
             var playerId = PlayerIds[playerName];
@@ -636,12 +639,6 @@ public class AcceptanceHandSteps
             }
         }
         playerName.Should().NotBeNullOrEmpty();
-    }
-
-    [Then(@"""(.*)"" has stack (\d+)")]
-    public void ThenPlayerHasStack(string playerName, int amount)
-    {
-        ThenPlayerStackIs(playerName, amount);
     }
 
     // =========================================================================
@@ -717,12 +714,9 @@ public class AcceptanceHandSteps
     // =========================================================================
     // Then steps - Active players
     // =========================================================================
-
-    [Then(@"active player count is (\d+)")]
-    public void ThenActivePlayerCountIs(int count)
-    {
-        count.Should().BeGreaterThanOrEqualTo(0);
-    }
+    // NOTE: `active player count is (\d+)` is owned by HandSteps.cs (unit
+    // feature only — reads `_context.HandAggregate.Players`). Acceptance
+    // features do not use this phrasing.
 
     // =========================================================================
     // Then steps - Side pots
@@ -763,18 +757,9 @@ public class AcceptanceHandSteps
     // =========================================================================
     // Then steps - Variant-specific
     // =========================================================================
-
-    [Then(@"each player has (\d+) hole cards")]
-    public void ThenEachPlayerHasHoleCards(int count)
-    {
-        count.Should().BeGreaterThan(0);
-    }
-
-    [Then(@"the remaining deck has (\d+) cards")]
-    public void ThenRemainingDeckHasCards(int count)
-    {
-        count.Should().BeGreaterThan(0);
-    }
+    // NOTE: `each player has (\d+) hole cards` and `the remaining deck has
+    // (\d+) cards` are owned by HandSteps.cs (unit feature game_rules only —
+    // both read `_context.LastEvent as CardsDealt`).
 
     [Then(@"the draw phase begins")]
     public void ThenDrawPhaseBegins()

@@ -26,7 +26,7 @@ public class HandFlowService : ProcessManagerService.ProcessManagerServiceBase
         response.Commands.AddRange(commands);
         if (events != null)
         {
-            response.ProcessEvents = events;
+            response.ProcessEvents.Add(events);
         }
 
         return Task.FromResult(response);

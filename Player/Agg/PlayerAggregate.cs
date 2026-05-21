@@ -71,4 +71,10 @@ public class PlayerAggregate : CommandHandler<PlayerState>
     {
         return TransferFundsHandler.Handle(cmd, State);
     }
+
+    [Handles(typeof(DeductReservedFunds))]
+    public FundsDeducted HandleDeductReservedFunds(DeductReservedFunds cmd)
+    {
+        return DeductReservedFundsHandler.Handle(cmd, State);
+    }
 }

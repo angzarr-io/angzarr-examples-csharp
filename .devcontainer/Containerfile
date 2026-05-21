@@ -4,5 +4,21 @@
 ARG CSHARP_IMAGE=ghcr.io/angzarr-io/angzarr-csharp:latest
 FROM ${CSHARP_IMAGE}
 
+# INFRA-1: see Rust devcontainer comment. Applies system-wide so the
+# `_container` entry's `git rev-parse --show-toplevel` succeeds against
+# the bind-mounted /workspace under rootless docker.
+USER root
+RUN git config --system --add safe.directory '*' \
+ && git config --system --add safe.directory '/workspace' \
+ && git config --system --add safe.directory '/angzarr'
+
 # Mark as devcontainer for justfile detection
 ENV DEVCONTAINER=true
+
+# Mutation tooling: dotnet-stryker for the cross-language `just mutate` recipe
+# (.plan/mutation-container-isolation.md). The base ghcr.io/angzarr-io/angzarr-csharp
+# image does NOT include it; pin it here for image-level reproducibility.
+ARG STRYKER_VERSION=4.14.1
+RUN dotnet tool install -g dotnet-stryker --version ${STRYKER_VERSION} \
+ && ln -sf /root/.dotnet/tools/dotnet-stryker /usr/local/bin/dotnet-stryker
+ENV PATH="/root/.dotnet/tools:${PATH}"

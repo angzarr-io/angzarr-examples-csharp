@@ -43,13 +43,12 @@ public class PlayerTableSaga : Saga
     }
 
     [Handles(typeof(PlayerSittingOut))]
-    public EventBook HandlePlayerSittingOut(PlayerSittingOut evt, List<EventBook> destinations)
+    public void HandlePlayerSittingOut(PlayerSittingOut evt)
     {
         var satOut = new PlayerSatOut { PlayerRoot = _currentSourceRoot, SatOutAt = evt.SatOutAt };
-
         var factAny = Any.Pack(satOut, "type.googleapis.com/");
 
-        return new EventBook
+        EmitFact(new EventBook
         {
             Cover = new Cover
             {
@@ -64,20 +63,16 @@ public class PlayerTableSaga : Saga
                     Event = factAny,
                 },
             },
-        };
+        });
     }
 
     [Handles(typeof(PlayerReturningToPlay))]
-    public EventBook HandlePlayerReturningToPlay(
-        PlayerReturningToPlay evt,
-        List<EventBook> destinations
-    )
+    public void HandlePlayerReturningToPlay(PlayerReturningToPlay evt)
     {
         var satIn = new PlayerSatIn { PlayerRoot = _currentSourceRoot, SatInAt = evt.SatInAt };
-
         var factAny = Any.Pack(satIn, "type.googleapis.com/");
 
-        return new EventBook
+        EmitFact(new EventBook
         {
             Cover = new Cover
             {
@@ -92,6 +87,8 @@ public class PlayerTableSaga : Saga
                     Event = factAny,
                 },
             },
-        };
+        });
     }
+
+    public List<EventBook> CollectEvents() => GetEvents();
 }

@@ -38,6 +38,12 @@ public class TableState
     public ByteString CurrentHandRoot { get; set; } = ByteString.Empty;
     public string Status { get; set; } = "";
 
+    // HIGH-EX-2.2.3 — hand-for-hand state machine
+    public string HandForHandStatus { get; set; } = "NONE";  // NONE / WAITING / COMPLETE
+    public ByteString HandForHandTournamentRoot { get; set; } = ByteString.Empty;
+
+    public bool IsInHandForHand => HandForHandStatus != "NONE";
+
     public bool Exists => !string.IsNullOrEmpty(TableId);
     public int PlayerCount => Seats.Count;
     public int ActivePlayerCount => Seats.Values.Count(s => !s.IsSittingOut);
@@ -169,6 +175,47 @@ public class TableState
                 );
                 if (seat != null)
                     seat.Stack = evt.NewStack;
+            }
+        )
+        .On<PlayerSeated>(
+            (state, evt) =>
+            {
+                state.Seats[evt.SeatPosition] = new SeatState
+                {
+                    Position = evt.SeatPosition,
+                    PlayerRoot = evt.PlayerRoot,
+                    Stack = evt.Stack,
+                };
+            }
+        )
+        .On<RebuyChipsAdded>(
+            (state, evt) =>
+            {
+                var seat = state.Seats.Values.FirstOrDefault(s =>
+                    s.PlayerRoot.Equals(evt.PlayerRoot)
+                );
+                if (seat != null)
+                    seat.Stack = evt.NewStack;
+            }
+        )
+        .On<TableHandForHandWaiting>(
+            (state, evt) =>
+            {
+                state.HandForHandStatus = "WAITING";
+                state.HandForHandTournamentRoot = evt.TournamentRoot;
+            }
+        )
+        .On<TableHandForHandRoundComplete>(
+            (state, evt) =>
+            {
+                state.HandForHandStatus = "COMPLETE";
+            }
+        )
+        .On<TableHandForHandEnded>(
+            (state, evt) =>
+            {
+                state.HandForHandStatus = "NONE";
+                state.HandForHandTournamentRoot = ByteString.Empty;
             }
         );
 

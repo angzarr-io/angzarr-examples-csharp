@@ -426,17 +426,27 @@ public class HandSteps
             if (part.Length < 2) continue;
             var rank = part[0] switch
             {
-                'A' => Rank.Ace, 'K' => Rank.King, 'Q' => Rank.Queen,
-                'J' => Rank.Jack, 'T' => Rank.Ten,
-                '9' => Rank.Nine, '8' => Rank.Eight, '7' => Rank.Seven,
-                '6' => Rank.Six, '5' => Rank.Five, '4' => Rank.Four,
-                '3' => Rank.Three, '2' => Rank.Two,
+                'A' => Rank.Ace,
+                'K' => Rank.King,
+                'Q' => Rank.Queen,
+                'J' => Rank.Jack,
+                'T' => Rank.Ten,
+                '9' => Rank.Nine,
+                '8' => Rank.Eight,
+                '7' => Rank.Seven,
+                '6' => Rank.Six,
+                '5' => Rank.Five,
+                '4' => Rank.Four,
+                '3' => Rank.Three,
+                '2' => Rank.Two,
                 _ => Rank.Two
             };
             var suit = part[1] switch
             {
-                's' => Suit.Spades, 'h' => Suit.Hearts,
-                'd' => Suit.Diamonds, 'c' => Suit.Clubs,
+                's' => Suit.Spades,
+                'h' => Suit.Hearts,
+                'd' => Suit.Diamonds,
+                'c' => Suit.Clubs,
                 _ => Suit.Clubs
             };
             cards.Add((suit, rank));
@@ -711,24 +721,11 @@ public class HandSteps
         _context.HandAggregate!.Status.Should().Be(status);
     }
 
-    [Then(@"each player has (\d+) hole cards")]
-    public void ThenEachPlayerHasHoleCards(int count)
-    {
-        var evt = _context.LastEvent as CardsDealt;
-        evt.Should().NotBeNull();
-        foreach (var pc in evt!.PlayerCards)
-        {
-            pc.Cards.Count.Should().Be(count);
-        }
-    }
-
-    [Then(@"the remaining deck has (\d+) cards")]
-    public void ThenTheRemainingDeckHasCards(int count)
-    {
-        var evt = _context.LastEvent as CardsDealt;
-        evt.Should().NotBeNull();
-        evt!.RemainingDeck.Count.Should().Be(count);
-    }
+    // NOTE: `each player has (\d+) hole cards` and `the remaining deck has
+    // (\d+) cards` are owned by GameRulesSteps.cs (unified binding for both
+    // unit features hand.feature and game_rules.feature; falls through to
+    // TestContext.LastEvent CardsDealt when the game-rules deal/draw path is
+    // not active).
 
     [Then(@"player ""(.*)"" has specific hole cards for seed ""(.*)""")]
     public void ThenPlayerHasSpecificHoleCardsForSeed(string playerName, string seed)
@@ -1120,6 +1117,10 @@ public class HandSteps
     {
         _context.LastException = null;
         _context.LastEvent = null;
+        // Clear the shared cross-cutting result key (used by TableStepsPhase2's
+        // "the result is a angzarr_client.proto.examples.* event" binding).
+        _scenarioContext["resultEventAny"] = null!;
+        _scenarioContext["error"] = null!;
 
         try
         {
@@ -1129,27 +1130,44 @@ public class HandSteps
             var result = _context.HandAggregate.HandleCommand(cmd);
             _context.LastEvent = result;
             _context.AddHandEvent(result);
+            // Publish into the shared cross-cutting context key so the
+            // generic fully-qualified-event Then-binding can find it.
+            _scenarioContext["resultEventAny"] = Any.Pack(result, "type.googleapis.com/");
         }
         catch (System.Reflection.TargetInvocationException ex)
         {
             // Unwrap reflection exceptions
             var inner = ex.InnerException;
             if (inner is CommandRejectedError cre)
+            {
                 _context.LastException = cre;
+                _scenarioContext["error"] = cre;
+            }
             else if (inner is InvalidArgumentError iae)
-                _context.LastException = new CommandRejectedError(iae.Message, "INVALID_ARGUMENT");
+            {
+                var wrapped = new CommandRejectedError(iae.Message, "INVALID_ARGUMENT");
+                _context.LastException = wrapped;
+                _scenarioContext["error"] = wrapped;
+            }
             else if (inner != null)
-                _context.LastException = new CommandRejectedError(inner.Message, "UNKNOWN");
+            {
+                var wrapped = new CommandRejectedError(inner.Message, "UNKNOWN");
+                _context.LastException = wrapped;
+                _scenarioContext["error"] = wrapped;
+            }
             else
                 throw;
         }
         catch (CommandRejectedError ex)
         {
             _context.LastException = ex;
+            _scenarioContext["error"] = ex;
         }
         catch (InvalidArgumentError ex)
         {
-            _context.LastException = new CommandRejectedError(ex.Message, "INVALID_ARGUMENT");
+            var wrapped = new CommandRejectedError(ex.Message, "INVALID_ARGUMENT");
+            _context.LastException = wrapped;
+            _scenarioContext["error"] = wrapped;
         }
     }
 

@@ -206,7 +206,7 @@ public class PlayerSteps
         var reserveEvt = new FundsReserved
         {
             Amount = new Currency { Amount = amount, CurrencyCode = "CHIPS" },
-            TableRoot = ByteString.CopyFromUtf8(tableId),
+            Key = ByteString.CopyFromUtf8(tableId),
             NewAvailableBalance = new Currency { Amount = newAvailable, CurrencyCode = "CHIPS" },
             NewReservedBalance = new Currency { Amount = newReserved, CurrencyCode = "CHIPS" },
             ReservedAt = Timestamp.FromDateTime(DateTime.UtcNow),
@@ -267,7 +267,7 @@ public class PlayerSteps
         var cmd = new ReserveFunds
         {
             Amount = new Currency { Amount = amount, CurrencyCode = "CHIPS" },
-            TableRoot = ByteString.CopyFromUtf8(tableId),
+            Key = ByteString.CopyFromUtf8(tableId),
         };
         ExecuteCommand(cmd);
     }
@@ -275,7 +275,7 @@ public class PlayerSteps
     [When(@"I handle a ReleaseFunds command for table ""(.*)""")]
     public void WhenIHandleAReleaseFundsCommandForTable(string tableId)
     {
-        var cmd = new ReleaseFunds { TableRoot = ByteString.CopyFromUtf8(tableId) };
+        var cmd = new ReleaseFunds { Key = ByteString.CopyFromUtf8(tableId) };
         ExecuteCommand(cmd);
     }
 

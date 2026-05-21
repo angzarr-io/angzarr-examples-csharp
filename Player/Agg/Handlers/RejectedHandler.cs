@@ -36,7 +36,7 @@ public static class RejectedHandler
         return new FundsReleased
         {
             Amount = new Currency { Amount = reservedAmount, CurrencyCode = "CHIPS" },
-            TableRoot = tableRoot,
+            Key = tableRoot,
             NewAvailableBalance = new Currency { Amount = newAvailable, CurrencyCode = "CHIPS" },
             NewReservedBalance = new Currency { Amount = newReserved, CurrencyCode = "CHIPS" },
             ReleasedAt = Timestamp.FromDateTime(DateTime.UtcNow),

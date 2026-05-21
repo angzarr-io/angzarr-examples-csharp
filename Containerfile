@@ -17,8 +17,13 @@ ARG DOTNET_VERSION=8.0
 # ============================================================================
 FROM mcr.microsoft.com/dotnet/sdk:${DOTNET_VERSION}-bookworm-slim AS base
 
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates git \
     && rm -rf /var/lib/apt/lists/*
+
+# INFRA-1: trust any bind-mounted workspace path (rootless docker friendliness).
+RUN git config --system --add safe.directory '*' \
+ && git config --system --add safe.directory '/workspace' \
+ && git config --system --add safe.directory '/angzarr'
 
 WORKDIR /app
 

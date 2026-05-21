@@ -19,15 +19,14 @@ public class TableHandSagaService : SagaService.SagaServiceBase
     public override Task<SagaResponse> Handle(SagaHandleRequest request, ServerCallContext context)
     {
         var response = new SagaResponse();
+        var root = request.Source.Cover?.Root?.Value.ToByteArray();
+        var correlationId = request.Source.Cover?.CorrelationId ?? "";
 
         foreach (var page in request.Source.Pages)
         {
             if (page.Event == null)
                 continue;
-
-            // Sagas receive source events only - framework handles destinations
-            var commands = _saga.Dispatch(page.Event, destinations: new List<EventBook>());
-            response.Commands.AddRange(commands);
+            response.Commands.AddRange(_saga.Dispatch(page.Event, root, correlationId));
         }
 
         return Task.FromResult(response);

@@ -11,16 +11,14 @@ public static class WithdrawFundsHandler
 {
     public static FundsWithdrawn Handle(WithdrawFunds cmd, PlayerState state)
     {
-        // Guard
         if (!state.Exists)
-            throw CommandRejectedError.PreconditionFailed("Player does not exist");
+            throw CommandRejectedError.PreconditionFailed("PLAYER_NOT_FOUND", "Player does not exist");
 
-        // Validate
         var amount = cmd.Amount?.Amount ?? 0;
         if (amount <= 0)
-            throw CommandRejectedError.InvalidArgument("amount must be positive");
+            throw CommandRejectedError.InvalidArgument("AMOUNT_MUST_BE_POSITIVE", "amount must be positive");
         if (amount > state.AvailableBalance)
-            throw CommandRejectedError.PreconditionFailed("Insufficient funds");
+            throw CommandRejectedError.PreconditionFailed("INSUFFICIENT_AVAILABLE_BALANCE", "Insufficient funds");
 
         // Compute
         var newBalance = state.Bankroll - amount;
