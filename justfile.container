@@ -1,4 +1,4 @@
-# C# poker examples - container version
+# C# examples - container version
 # This file is mounted as 'justfile' inside the container
 # Also used directly in CI container jobs
 
@@ -27,7 +27,7 @@ test-unit: build
     dotnet test {{SLN}} --configuration Release --no-build --verbosity normal --filter "TestCategory!=Acceptance&TestCategory!=e2e&TestCategory!=sync-mode&TestCategory!=cascade-error"
 
 test-acceptance: build
-    PLAYER_URL="${PLAYER_URL:-http://localhost:1310}" dotnet test {{SLN}} --configuration Release --no-build --verbosity normal --filter "TestCategory=Acceptance|TestCategory=e2e"
+    dotnet test {{SLN}} --configuration Release --no-build --verbosity normal --filter "TestCategory=Acceptance|TestCategory=e2e"
 
 test: build
     dotnet test {{SLN}} --configuration Release --no-build --verbosity normal
