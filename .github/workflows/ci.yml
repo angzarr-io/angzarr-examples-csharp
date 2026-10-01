@@ -35,7 +35,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: false  # fetched below, non-recursive
+
+      - name: Fetch submodules (non-recursive; nested vendor pins are not needed)
+        run: git submodule update --init
 
       - name: Setup buf
         uses: bufbuild/buf-action@v1
