@@ -1,0 +1,10 @@
+version: v2
+inputs:
+  - directory: angzarr-project/proto
+    exclude_paths:
+      - angzarr-project/proto/examples/ai_sidecar.proto
+plugins:
+  - remote: buf.build/protocolbuffers/csharp
+    out: Angzarr.Proto/Generated
+  - remote: buf.build/grpc/csharp
+    out: Angzarr.Proto/Generated

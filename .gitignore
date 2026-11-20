@@ -1,0 +1,33 @@
+# Build artifacts
+bin/
+obj/
+*.dll
+*.pdb
+proto/**/*.cs
+
+# buf generate output
+Angzarr.Proto/Generated/
+
+# buf-exported proto sources (legacy)
+angzarr-proto/
+examples-proto/
+
+# Binaries
+*/*/agg-*
+*/*/saga-*
+*/*/pmg-*
+*/*/prj-*
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Kubernetes
+*.kubeconfig

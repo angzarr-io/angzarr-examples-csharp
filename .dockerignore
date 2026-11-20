@@ -1,0 +1,16 @@
+# .NET build artifacts - MUST be excluded to prevent host obj/ directories
+# from overwriting the container's dotnet restore output during COPY . ./
+**/obj/
+**/bin/
+
+# Git metadata (not needed for build, reduces context size)
+**/.git/
+
+# IDE and editor files
+**/.idea/
+**/.vscode/
+**/*.swp
+**/*.swo
+
+# OS files
+**/.DS_Store

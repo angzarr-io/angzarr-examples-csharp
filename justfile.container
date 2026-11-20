@@ -1,0 +1,39 @@
+# C# poker examples - container version
+# This file is mounted as 'justfile' inside the container
+# Also used directly in CI container jobs
+
+set shell := ["bash", "-c"]
+
+ROOT := `git rev-parse --show-toplevel`
+SLN := "Angzarr.Examples.sln"
+
+default:
+    @just --list
+
+# Generate C# proto code from .proto sources via buf
+proto-gen:
+    buf generate
+
+restore: proto-gen
+    dotnet restore {{SLN}}
+
+build: restore
+    dotnet build {{SLN}} --configuration Release --no-restore
+
+build-dev: restore
+    dotnet build {{SLN}} --configuration Debug --no-restore
+
+test-unit: build
+    dotnet test {{SLN}} --configuration Release --no-build --verbosity normal --filter "TestCategory!=Acceptance&TestCategory!=e2e&TestCategory!=sync-mode&TestCategory!=cascade-error"
+
+test-acceptance: build
+    PLAYER_URL="${PLAYER_URL:-http://localhost:1310}" dotnet test {{SLN}} --configuration Release --no-build --verbosity normal --filter "TestCategory=Acceptance|TestCategory=e2e"
+
+test: build
+    dotnet test {{SLN}} --configuration Release --no-build --verbosity normal
+
+fmt:
+    dotnet format {{SLN}}
+
+lint: build
+    dotnet build {{SLN}} --configuration Release --no-restore /p:TreatWarningsAsErrors=true
